@@ -1,0 +1,34 @@
+/* Design tokens shared with prototypes/admin_prototype.html — keep both in sync. */
+:root {
+  --paper: #EDEEEA;
+  --ink: #1B1B18;
+  --muted: #6E6C63;
+  --line: #D9D6CC;
+  --surface: #FFFFFF;
+  --surface-2: #F5F4EF;
+  --accent: #2E6F86;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #DCEAEE;
+  --rec: #B23A2A;
+  --rec-soft: #F5DCD6;
+  --radius: 4px;
+  --shadow: 0 1px 2px rgba(20, 20, 15, 0.06), 0 4px 14px rgba(20, 20, 15, 0.06);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #17181B;
+    --ink: #ECEBE5;
+    --muted: #98978F;
+    --line: #2C2C2C;
+    --surface: #201F1D;
+    --surface-2: #1B1A18;
+    --accent: #6BB2C9;
+    --accent-ink: #0E1A1D;
+    --accent-soft: #22333A;
+    --rec: #E2604A;
+    --rec-soft: #3A2320;
+    color-scheme: dark;
+  }
+}
