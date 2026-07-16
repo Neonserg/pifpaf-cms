@@ -1,0 +1,1445 @@
+<title>pifpaf — адмінка (прототип)</title>
+<style>
+  /* ---------- tokens ---------- */
+  :root{
+    --paper:#EDEEEA; --ink:#1B1B18; --muted:#6E6C63; --line:#D9D6CC;
+    --surface:#FFFFFF; --surface-2:#F5F4EF;
+    --accent:#2E6F86; --accent-ink:#FFFFFF; --accent-soft:#DCEAEE;
+    --rec:#B23A2A; --rec-soft:#F5DCD6;
+    --focus:#2E6F86;
+    --radius:4px;
+    --shadow: 0 1px 2px rgba(20,20,15,.06), 0 4px 14px rgba(20,20,15,.06);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#17181B; --ink:#ECEBE5; --muted:#98978F; --line:#2C2C2C;
+      --surface:#201F1D; --surface-2:#1B1A18;
+      --accent:#6BB2C9; --accent-ink:#0E1A1D; --accent-soft:#22333A;
+      --rec:#E2604A; --rec-soft:#3A2320;
+      --shadow: 0 1px 2px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.35);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#17181B; --ink:#ECEBE5; --muted:#98978F; --line:#2C2C2C;
+    --surface:#201F1D; --surface-2:#1B1A18;
+    --accent:#6BB2C9; --accent-ink:#0E1A1D; --accent-soft:#22333A;
+    --rec:#E2604A; --rec-soft:#3A2320;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"]{
+    --paper:#EDEEEA; --ink:#1B1B18; --muted:#6E6C63; --line:#D9D6CC;
+    --surface:#FFFFFF; --surface-2:#F5F4EF;
+    --accent:#2E6F86; --accent-ink:#FFFFFF; --accent-soft:#DCEAEE;
+    --rec:#B23A2A; --rec-soft:#F5DCD6;
+    color-scheme: light;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font: 14px/1.5 ui-sans-serif, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{ font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace; font-variant-numeric: tabular-nums; }
+  ::selection{ background:var(--accent-soft); }
+  button{ font:inherit; }
+  :focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+
+  .app{ display:flex; height:100vh; overflow:hidden; }
+
+  /* ---------- rail ---------- */
+  .rail{
+    width:212px; flex:none; background:var(--surface); border-right:1px solid var(--line);
+    display:flex; flex-direction:column; transition:width .16s ease;
+  }
+  .rail.collapsed{ width:60px; }
+  .rail-head{ padding:16px 14px 12px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line); min-height:20px; }
+  .rail-mark{ width:26px; height:26px; flex:none; border-radius:3px; background:var(--ink); color:var(--paper); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; letter-spacing:-.02em; }
+  .rail-title{ overflow:hidden; white-space:nowrap; }
+  .rail-title b{ display:block; font-size:13px; letter-spacing:.01em; }
+  .rail-title span{ display:block; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+  .rail.collapsed .rail-title{ display:none; }
+
+  .rail-nav{ list-style:none; margin:0; padding:10px 8px; display:flex; flex-direction:column; gap:2px; flex:1; }
+  .rail-btn{
+    display:flex; align-items:center; gap:11px; width:100%; padding:9px 10px; border:0; background:transparent;
+    border-radius:var(--radius); color:var(--muted); cursor:pointer; text-align:left; white-space:nowrap; overflow:hidden;
+  }
+  .rail-btn svg{ flex:none; width:18px; height:18px; }
+  .rail-btn span{ font-size:13px; }
+  .rail-btn:hover{ background:var(--surface-2); color:var(--ink); }
+  .rail-btn.active{ background:var(--accent-soft); color:var(--ink); font-weight:600; }
+  .rail.collapsed .rail-btn span{ display:none; }
+  .rail.collapsed .rail-btn{ justify-content:center; }
+
+  .rail-foot{ padding:8px; border-top:1px solid var(--line); }
+  .collapse-btn{
+    display:flex; align-items:center; gap:10px; width:100%; padding:9px 10px; border:0; background:transparent;
+    border-radius:var(--radius); color:var(--muted); cursor:pointer;
+  }
+  .collapse-btn:hover{ background:var(--surface-2); color:var(--ink); }
+  .collapse-btn svg{ flex:none; width:16px; height:16px; transition:transform .16s ease; }
+  .rail.collapsed .collapse-btn svg{ transform:rotate(180deg); }
+  .rail.collapsed .collapse-btn span{ display:none; }
+
+  /* ---------- workspace ---------- */
+  .workspace{ flex:1; display:flex; flex-direction:column; min-width:0; }
+  .topbar{
+    height:56px; flex:none; display:flex; align-items:center; justify-content:space-between;
+    padding:0 20px; border-bottom:1px solid var(--line); background:var(--surface);
+  }
+  .crumb{ display:flex; align-items:baseline; gap:8px; }
+  .crumb b{ font-size:15px; }
+  .crumb span{ font-size:12px; color:var(--muted); }
+  .top-actions{ display:flex; gap:8px; align-items:center; }
+
+  .btn{
+    border:1px solid var(--line); background:var(--surface); color:var(--ink); padding:7px 13px;
+    border-radius:var(--radius); cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn:hover{ background:var(--surface-2); }
+  .btn.primary{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .btn.primary:hover{ opacity:.88; }
+  .btn.subtle{ border-color:transparent; background:transparent; color:var(--muted); }
+  .btn.subtle:hover{ background:var(--surface-2); color:var(--ink); }
+  .btn svg{ width:14px; height:14px; }
+
+  .content{ flex:1; overflow:auto; }
+  .panel{ display:none; height:100%; }
+  .panel.active{ display:flex; flex-direction:column; height:100%; }
+
+  /* ---------- PAGES: tree + builder ---------- */
+  .pages-layout{ flex:1; display:flex; min-height:0; position:relative; }
+  .tree-pane{ width:272px; flex:none; border-right:1px solid var(--line); background:var(--surface); overflow-y:auto; padding:12px 8px; transition:width .16s ease; }
+  .tree-pane.collapsed{ width:0; padding:0; border-right:0; overflow:hidden; }
+  .tree-toggle{
+    position:absolute; top:50%; left:272px; transform:translate(-50%,-50%); z-index:5;
+    width:18px; height:38px; border:1px solid var(--line); background:var(--surface); color:var(--muted);
+    border-radius:4px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    box-shadow:var(--shadow); transition:left .16s ease;
+  }
+  .tree-toggle:hover{ background:var(--surface-2); color:var(--ink); }
+  .tree-toggle svg{ width:12px; height:12px; transition:transform .16s ease; }
+  .pages-layout.tree-collapsed .tree-toggle{ left:0; }
+  .pages-layout.tree-collapsed .tree-toggle svg{ transform:rotate(180deg); }
+  .tree-hint{ padding:6px 10px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .tree{ list-style:none; margin:0; padding:0; }
+  .tree-node{ margin-bottom:1px; }
+  .tree-row{
+    display:flex; align-items:center; gap:7px; padding:7px 8px; border-radius:var(--radius); cursor:pointer; color:var(--ink);
+  }
+  .tree-row:hover{ background:var(--surface-2); }
+  .tree-row.selected{ background:var(--accent-soft); font-weight:600; }
+  .tree-row .chev{ width:13px; height:13px; flex:none; color:var(--muted); transition:transform .12s ease; }
+  .tree-row.open .chev{ transform:rotate(90deg); }
+  .tree-row .ticon{ width:15px; height:15px; flex:none; color:var(--muted); }
+  .tree-row.selected .ticon{ color:var(--accent); }
+  .tree-row .tlabel{ font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+  .tree-row .tcount{ font-size:11px; color:var(--muted); }
+  .tree-children{ list-style:none; margin:0; padding:0 0 0 20px; display:none; }
+  .tree-node.open > .tree-children{ display:block; }
+  .tree-add{ margin:10px 6px 4px; }
+
+  .builder-pane{ flex:1; overflow-y:auto; background:var(--paper); }
+  .builder-sheet{ max-width:760px; margin:26px auto 120px; padding:0 24px; }
+  .page-head{ margin-bottom:18px; }
+  .page-head input.title{
+    font-size:24px; font-weight:700; border:0; background:transparent; color:var(--ink); width:100%; padding:2px 0;
+    letter-spacing:-.01em;
+  }
+  .page-head .slug{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .page-head .slug b{ color:var(--ink); font-weight:500; }
+  .slug-edit{ font-size:12px; color:var(--muted); margin-top:2px; display:flex; align-items:center; gap:1px; }
+  .slug-input{
+    border:0; background:transparent; color:var(--ink); font:inherit; font-size:12px; padding:2px 4px; border-radius:2px; min-width:90px;
+  }
+  .slug-input:hover{ background:var(--surface-2); }
+  .slug-input:focus{ background:var(--surface-2); outline:1px solid var(--line); }
+
+  .category-panel{ padding:26px 24px; max-width:640px; margin:0 auto; }
+  .category-panel h2{ margin:0 0 4px; font-size:20px; }
+  .category-panel p{ color:var(--muted); font-size:13px; margin:0 0 18px; }
+  .cat-list{ list-style:none; margin:0; padding:0; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; background:var(--surface); }
+  .cat-list li{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--line); }
+  .cat-list li:last-child{ border-bottom:0; }
+  .cat-list .grip{ color:var(--muted); cursor:grab; }
+  .cat-list .name{ flex:1; font-size:13px; }
+  .cat-list .meta{ font-size:11px; color:var(--muted); }
+
+  /* inserter */
+  .inserter{ position:relative; min-height:22px; margin:6px 0; display:flex; align-items:center; }
+  .inserter-line{ position:absolute; left:0; right:0; top:50%; height:1px; background:transparent; }
+  .inserter-btn{
+    position:relative; z-index:1; margin:0 auto; height:25px; padding:0 12px; border-radius:13px; border:1px dashed var(--line);
+    background:var(--paper); color:var(--muted); cursor:pointer; display:flex; align-items:center; gap:6px; opacity:.55;
+    font-size:12px; white-space:nowrap;
+    transition:opacity .1s ease, background .1s ease, color .1s ease, border-color .1s ease;
+  }
+  .inserter:hover .inserter-btn, .inserter-btn.menu-open{ opacity:1; }
+  .inserter:hover .inserter-line{ background:var(--line); }
+  .inserter-btn:hover, .inserter-btn.menu-open{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); opacity:1; }
+  .inserter-btn svg{ width:12px; height:12px; flex:none; }
+
+  .insert-menu{
+    position:absolute; left:50%; transform:translateX(-50%); top:26px; z-index:20;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:6px; width:220px; display:none;
+  }
+  .insert-menu.show{ display:block; }
+  .insert-menu button{
+    width:100%; display:flex; align-items:center; gap:10px; padding:8px 9px; border:0; background:transparent; border-radius:3px;
+    cursor:pointer; text-align:left; color:var(--ink); font-size:13px;
+  }
+  .insert-menu button:hover{ background:var(--surface-2); }
+  .insert-menu button svg{ width:16px; height:16px; color:var(--muted); flex:none; }
+
+  /* block card */
+  .block{
+    position:relative; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface);
+    margin-bottom:2px;
+  }
+  .block.dragging{ opacity:.35; }
+  .block-bar{
+    display:flex; align-items:center; gap:8px; padding:7px 10px; border-bottom:1px solid var(--line);
+    background:var(--surface-2); border-radius:var(--radius) var(--radius) 0 0;
+  }
+  .block-bar .grip{ cursor:grab; color:var(--muted); display:flex; }
+  .block-bar .grip svg{ width:14px; height:14px; }
+  .block-bar .btype{ display:flex; align-items:center; gap:6px; font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  .block-bar .btype svg{ width:13px; height:13px; }
+  .block-bar .spacer{ flex:1; }
+  .block-actions{ display:flex; gap:2px; }
+  .icon-btn{ border:0; background:transparent; color:var(--muted); width:24px; height:24px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .icon-btn:hover{ background:var(--line); color:var(--ink); }
+  .icon-btn svg{ width:14px; height:14px; }
+  .block-body{ padding:16px; }
+
+  /* text block */
+  .rt-toolbar{ display:flex; gap:2px; margin-bottom:8px; }
+  .rt-toolbar button{ width:26px; height:26px; border:1px solid var(--line); background:var(--surface); border-radius:3px; cursor:pointer; color:var(--ink); font-size:12px; }
+  .rt-toolbar button:hover{ background:var(--surface-2); }
+  .rt-edit{ min-height:52px; outline:none; font-size:14px; line-height:1.6; }
+  .rt-edit:empty:before{ content:attr(data-ph); color:var(--muted); }
+
+  .cols{ display:flex; gap:16px; }
+  .col-seg{ display:flex; gap:6px; margin-bottom:10px; }
+  .seg-btn{ border:1px solid var(--line); background:var(--surface); padding:5px 11px; font-size:12px; cursor:pointer; color:var(--muted); }
+  .seg-btn:first-child{ border-radius:3px 0 0 3px; }
+  .seg-btn:last-child{ border-radius:0 3px 3px 0; }
+  .seg-btn + .seg-btn{ border-left:0; }
+  .seg-btn.active{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .col-wrap{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .col-wrap .rt-toolbar{ margin-bottom:6px; }
+  .col{ border:1px dashed var(--line); border-radius:3px; padding:10px; min-height:60px; font-size:13.5px; outline:none; flex:1; }
+  .col:empty:before{ content:attr(data-ph); color:var(--muted); }
+
+  /* gallery block */
+  .gal-toolbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:10px; }
+  .gal-count{ font-size:12px; color:var(--muted); }
+  .gal-preview{ border:1px solid var(--line); border-radius:3px; background:var(--surface-2); padding:6px; min-height:80px; }
+  .g-tile{ position:relative; }
+  .g-vertical{ display:flex; flex-direction:column; gap:6px; }
+  .g-vertical .g-item{ width:100%; }
+  .g-vertical .g-item img{ width:100%; height:auto; }
+  .g-horizontal{ display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; }
+  .g-horizontal .g-item{ height:120px; flex:none; }
+  .g-horizontal .g-item img{ height:100%; width:auto; }
+  .g-horizontal::-webkit-scrollbar{ height:6px; }
+  .g-horizontal::-webkit-scrollbar-thumb{ background:var(--line); border-radius:3px; }
+  .empty-gal{ display:flex; align-items:center; justify-content:center; height:80px; color:var(--muted); font-size:13px; }
+
+  /* individual media item inside a gallery: draggable to reorder, hover reveals delete, click edits caption */
+  .g-item{ cursor:grab; }
+  .g-item img{ display:block; border-radius:2px; width:100%; height:100%; object-fit:cover; cursor:pointer; }
+  .g-tile .g-item{ position:absolute; }
+  .g-item.dragging-media{ opacity:.35; cursor:grabbing; }
+  .g-item.drag-over{ outline:2px solid var(--accent); outline-offset:-2px; border-radius:2px; }
+  .media-badge{ position:absolute; top:4px; right:4px; background:rgba(0,0,0,.55); color:#fff; border-radius:3px; width:18px; height:18px; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .media-badge svg{ width:10px; height:10px; }
+  .g-del{
+    position:absolute; top:4px; left:4px; width:20px; height:20px; border-radius:50%; border:0;
+    background:rgba(15,15,12,.62); color:#fff; display:flex; align-items:center; justify-content:center;
+    opacity:0; transition:opacity .12s ease, background .12s ease; cursor:pointer;
+  }
+  .g-item:hover .g-del{ opacity:1; }
+  .g-del:hover{ background:var(--rec); }
+  .g-del svg{ width:11px; height:11px; }
+
+  /* caption: hover tooltip in tile layout, always-on overlay bar in vertical/horizontal scroll */
+  .g-cap-hint{
+    position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%);
+    background:rgba(18,18,15,.94); color:#fff; font-size:11px; line-height:1.3; padding:4px 8px; border-radius:4px;
+    max-width:200px; white-space:normal; opacity:0; pointer-events:none; transition:opacity .12s ease; z-index:8;
+  }
+  .g-item:hover .g-cap-hint{ opacity:1; }
+  .g-cap-overlay{
+    position:absolute; left:0; right:0; bottom:0; padding:14px 8px 6px;
+    background:linear-gradient(to top, rgba(10,10,8,.78), transparent);
+    color:#fff; font-size:11.5px; line-height:1.3; pointer-events:none;
+  }
+
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(15,15,12,.45); display:none; align-items:center; justify-content:center; z-index:60;
+  }
+  .modal-backdrop.show{ display:flex; }
+  .modal-card{ width:380px; max-width:90vw; background:var(--surface); border:1px solid var(--line); border-radius:6px; box-shadow:var(--shadow); padding:18px; }
+  .modal-card h4{ margin:0 0 3px; font-size:14.5px; }
+  .modal-card p{ margin:0 0 12px; font-size:11.5px; color:var(--muted); }
+  .modal-card textarea{
+    width:100%; min-height:84px; border:1px solid var(--line); border-radius:4px; padding:9px 10px; font:inherit;
+    background:var(--paper); color:var(--ink); resize:vertical;
+  }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+
+  /* media block (single): live "how it'll look on the page" preview first, controls below */
+  .mb-stage{
+    display:flex; border:1px dashed var(--line); border-radius:3px; background:var(--surface-2); padding:12px;
+    margin-bottom:14px; min-height:70px;
+  }
+  .mb-stage img{ display:block; border-radius:2px; height:auto; }
+  .mb-empty{ margin:auto; color:var(--muted); font-size:12.5px; }
+  .media-block-body{ display:flex; }
+  .mb-controls{ flex:1; min-width:200px; display:flex; flex-direction:column; gap:10px; }
+  .field-row label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:6px; }
+
+  /* dropzone / picker */
+  .picker{ display:none; margin-top:12px; border:1px solid var(--line); border-radius:3px; background:var(--surface-2); padding:12px; }
+  .picker.show{ display:block; }
+  .picker-order{ display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:12px; color:var(--muted); }
+  .picker-order select{ padding:5px 8px; font-size:12px; border:1px solid var(--line); border-radius:3px; background:var(--surface); color:var(--ink); }
+  .picker-tabs{ display:flex; gap:4px; margin-bottom:10px; }
+  .picker-tab{ padding:6px 12px; font-size:12px; border:1px solid var(--line); background:var(--surface); border-radius:3px; cursor:pointer; color:var(--muted); }
+  .picker-tab.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .picker-view{ display:none; }
+  .picker-view.active{ display:block; }
+  .dropzone{
+    border:1.5px dashed var(--line); border-radius:3px; padding:26px 14px; text-align:center; color:var(--muted); font-size:13px; cursor:pointer;
+  }
+  .dropzone:hover, .dropzone.drag{ border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+  .dropzone svg{ width:22px; height:22px; margin-bottom:6px; }
+  .pick-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:8px; max-height:260px; overflow-y:auto; }
+  .pick-item{ position:relative; border-radius:3px; overflow:hidden; cursor:pointer; border:2px solid transparent; aspect-ratio:1; }
+  .pick-item img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .pick-item.sel{ border-color:var(--accent); }
+  .pick-item .chk{ position:absolute; top:4px; left:4px; width:16px; height:16px; border-radius:50%; background:rgba(255,255,255,.85); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; }
+  .pick-item.sel .chk{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .pick-item .chk svg{ width:10px; height:10px; display:none; }
+  .pick-item.sel .chk svg{ display:block; }
+  .picker-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+
+  /* MEDIA LIBRARY panel */
+  .media-toolbar{ display:flex; align-items:center; gap:10px; padding:14px 20px; border-bottom:1px solid var(--line); background:var(--surface); flex-wrap:wrap; }
+  .search{ position:relative; flex:1; min-width:200px; max-width:320px; }
+  .search input{ width:100%; padding:7px 10px 7px 30px; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); color:var(--ink); font-size:13px; }
+  .search svg{ position:absolute; left:9px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:var(--muted); }
+  select{ padding:7px 9px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); color:var(--ink); font-size:13px; }
+  .media-body{ flex:1; overflow-y:auto; padding:18px 20px 60px; }
+  .lib-dropzone{ border:1.5px dashed var(--line); border-radius:6px; padding:22px; text-align:center; color:var(--muted); margin-bottom:18px; }
+  .lib-dropzone.drag{ border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+  .lib-dropzone b{ color:var(--ink); }
+  .lib-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+  .lib-card{ border:1px solid var(--line); border-radius:4px; overflow:hidden; background:var(--surface); }
+  .lib-thumb{ position:relative; aspect-ratio:4/3; background:var(--surface-2); overflow:hidden; }
+  .lib-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .lib-info{ padding:7px 9px; }
+  .lib-info .fn{ font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lib-info .meta{ font-size:10.5px; color:var(--muted); margin-top:2px; }
+  .prog{ position:absolute; left:6px; right:6px; bottom:6px; height:4px; background:rgba(255,255,255,.5); border-radius:2px; overflow:hidden; }
+  .prog i{ display:block; height:100%; width:0%; background:var(--accent); transition:width .25s linear; }
+
+  /* FORMS panel */
+  .forms-layout{ flex:1; display:flex; min-height:0; }
+  .forms-fields{ width:400px; flex:none; border-right:1px solid var(--line); padding:18px; overflow-y:auto; }
+  .forms-preview{ flex:1; padding:30px; overflow-y:auto; background:var(--paper); }
+  .field-card{ border:1px solid var(--line); border-radius:3px; background:var(--surface); padding:10px; margin-bottom:8px; display:flex; align-items:center; gap:10px; }
+  .field-card svg.grip{ color:var(--muted); flex:none; width:14px; height:14px; }
+  .field-card .fi{ flex:1; min-width:0; }
+  .field-card input.flabel{ width:100%; border:0; background:transparent; font-size:13px; color:var(--ink); padding:2px 0; }
+  .field-card .ftype{ font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .req-toggle{ display:flex; align-items:center; gap:5px; font-size:11px; color:var(--muted); white-space:nowrap; }
+  .preview-card{ max-width:420px; margin:0 auto; background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:26px; }
+  .preview-card h3{ margin:0 0 4px; font-size:17px; }
+  .preview-card p.sub{ margin:0 0 18px; color:var(--muted); font-size:12.5px; }
+  .pf-field{ margin-bottom:14px; }
+  .pf-field label{ display:block; font-size:12.5px; margin-bottom:5px; }
+  .pf-field label .opt{ color:var(--muted); font-weight:400; }
+  .pf-field input, .pf-field textarea, .pf-field select{
+    width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:3px; background:var(--paper); color:var(--ink); font:inherit;
+  }
+  .pf-field textarea{ min-height:70px; resize:vertical; }
+
+  /* switch */
+  .switch{ position:relative; display:inline-block; width:34px; height:19px; flex:none; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .slider{ position:absolute; inset:0; background:var(--line); border-radius:20px; cursor:pointer; transition:.15s; }
+  .slider:before{ content:""; position:absolute; width:14px; height:14px; left:2.5px; top:2.5px; background:var(--surface); border-radius:50%; transition:.15s; box-shadow:0 1px 2px rgba(0,0,0,.3); }
+  input:checked + .slider{ background:var(--accent); }
+  input:checked + .slider:before{ transform:translateX(15px); }
+
+  /* SETTINGS panel */
+  .settings-wrap{ max-width:640px; margin:0 auto; padding:28px 24px 80px; width:100%; }
+  .set-group{ background:var(--surface); border:1px solid var(--line); border-radius:6px; margin-bottom:16px; overflow:hidden; }
+  .set-group h4{ margin:0; padding:12px 16px; border-bottom:1px solid var(--line); font-size:12px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); background:var(--surface-2); }
+  .set-row{ display:flex; align-items:center; gap:14px; padding:14px 16px; border-bottom:1px solid var(--line); }
+  .set-row:last-child{ border-bottom:0; }
+  .set-row .si{ flex:1; min-width:0; }
+  .set-row .st{ font-size:13.5px; margin-bottom:2px; }
+  .set-row .sd{ font-size:11.5px; color:var(--muted); }
+  .set-row input[type=text], .set-row textarea, .set-row select{
+    padding:7px 9px; border:1px solid var(--line); border-radius:3px; background:var(--paper); color:var(--ink); font:inherit;
+  }
+  .set-row input[type=text]{ width:220px; }
+  .char-count{ font-size:11px; color:var(--muted); margin-top:4px; }
+
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--ink); color:var(--paper);
+    padding:10px 18px; border-radius:5px; font-size:13px; opacity:0; pointer-events:none; transition:.18s ease; display:flex; align-items:center; gap:8px;
+    box-shadow:var(--shadow); z-index:100;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast svg{ width:14px; height:14px; color:#7FD08A; }
+</style>
+
+<div class="app">
+  <!-- RAIL -->
+  <nav class="rail" id="rail">
+    <div class="rail-head">
+      <div class="rail-mark">pp</div>
+      <div class="rail-title"><b>pifpaf</b><span>Адмін-панель</span></div>
+    </div>
+    <ul class="rail-nav">
+      <li><button class="rail-btn active" data-section="pages">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+        <span>Сторінки</span>
+      </button></li>
+      <li><button class="rail-btn" data-section="media">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="15" rx="1.5"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 16l-5.5-5-8 7"/></svg>
+        <span>Медіатека</span>
+      </button></li>
+      <li><button class="rail-btn" data-section="forms">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3.5" width="16" height="17" rx="1.5"/><path d="M8 8h8M8 11.5h8M8 15h4.5"/></svg>
+        <span>Форми</span>
+      </button></li>
+      <li><button class="rail-btn" data-section="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 000-3l1-1.7-1.7-1.7-1.7 1a1.7 1.7 0 00-3 0l-1-1.7-1.7 1.7 1 1.7a1.7 1.7 0 000 3l-1 1.7 1.7 1.7 1.7-1a1.7 1.7 0 003 0l1 1.7 1.7-1.7z"/></svg>
+        <span>Налаштування</span>
+      </button></li>
+    </ul>
+    <div class="rail-foot">
+      <button class="collapse-btn" id="collapseBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 5l-7 7 7 7"/><path d="M9 5l-7 7 7 7" opacity=".4"/></svg>
+        <span>Згорнути</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- WORKSPACE -->
+  <div class="workspace">
+    <div class="topbar">
+      <div class="crumb"><b id="crumbTitle">Сторінки сайту</b><span id="crumbSub">pifpaf.online</span></div>
+      <div class="top-actions" id="topActions">
+        <button class="btn subtle" id="previewBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          Переглянути на сайті
+        </button>
+        <button class="btn primary" id="saveBtn">Зберегти</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ================= PAGES ================= -->
+      <section class="panel active" id="panel-pages">
+        <div class="pages-layout" id="pagesLayout">
+          <aside class="tree-pane" id="treePane">
+            <div class="tree-hint">Меню сайту</div>
+            <ul class="tree" id="tree"></ul>
+            <div class="tree-add">
+              <button class="btn subtle" id="addPageBtn" style="width:100%;justify-content:center;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+                Додати пункт меню
+              </button>
+            </div>
+          </aside>
+          <button class="tree-toggle" id="treeToggle" title="Згорнути/розгорнути меню сайту">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg>
+          </button>
+          <div class="builder-pane" id="builderPane"><!-- rendered by JS --></div>
+        </div>
+      </section>
+
+      <!-- ================= MEDIA ================= -->
+      <section class="panel" id="panel-media">
+        <div class="media-toolbar">
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="mediaSearch" placeholder="Пошук за назвою…">
+          </div>
+          <select id="mediaTypeFilter">
+            <option value="all">Усі типи</option>
+            <option value="photo">Тільки фото</option>
+            <option value="video">Тільки відео</option>
+          </select>
+          <select id="mediaGalleryFilter"><option value="all">Усі галереї</option></select>
+          <span class="char-count" id="mediaCount" style="margin-left:auto;"></span>
+        </div>
+        <div class="media-body">
+          <div class="lib-dropzone" id="libDrop">
+            <b>Перетягніть сюди фото чи відео</b> — або <u style="cursor:pointer" id="libBrowse">оберіть файли</u>. Можна одразу декілька десятків файлів.
+            <input type="file" id="libInput" accept="image/*,video/*" multiple style="display:none">
+          </div>
+          <div class="lib-grid" id="libGrid"></div>
+        </div>
+      </section>
+
+      <!-- ================= FORMS ================= -->
+      <section class="panel" id="panel-forms">
+        <div class="forms-layout">
+          <div class="forms-fields">
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;">Форма «Контакти»</div>
+            <div id="fieldsList"></div>
+            <div class="inserter" style="height:auto;margin-top:6px;">
+              <button class="btn subtle" id="addFieldBtn" style="width:100%;justify-content:center;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+                Додати поле
+              </button>
+              <div class="insert-menu" id="fieldMenu" style="left:50%;"></div>
+            </div>
+          </div>
+          <div class="forms-preview">
+            <div class="preview-card">
+              <h3>Зв'язатися з нами</h3>
+              <p class="sub">Так форма виглядатиме на сторінці «Контакти»</p>
+              <div id="formPreview"></div>
+              <button class="btn primary" style="width:100%;justify-content:center;">Надіслати</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SETTINGS ================= -->
+      <section class="panel" id="panel-settings">
+        <div class="media-body" style="padding:0;">
+          <div class="settings-wrap">
+            <div class="set-group">
+              <h4>Загальне</h4>
+              <div class="set-row">
+                <div class="si"><div class="st">Назва сайту</div><div class="sd">Показується у вкладці браузера і в результатах пошуку</div></div>
+                <input type="text" value="Sergiy Rud &amp; Juliya Malanuk :: Table-top photography">
+              </div>
+              <div class="set-row">
+                <div class="si"><div class="st">Домен</div><div class="sd">Підключений власний домен</div></div>
+                <span class="mono" style="font-size:13px;">pifpaf.online</span>
+              </div>
+              <div class="set-row">
+                <div class="si"><div class="st">Домашня галерея</div><div class="sd">Яка добірка показується на головній</div></div>
+                <select><option>Best gallery (обрані роботи)</option><option>people & ...</option></select>
+              </div>
+            </div>
+
+            <div class="set-group">
+              <h4>Навігація</h4>
+              <div class="set-row">
+                <div class="si"><div class="st">Згорнуте бічне меню за замовчуванням</div><div class="sd">Відвідувач зможе розгорнути його вручну</div></div>
+                <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+              </div>
+              <div class="set-row">
+                <div class="si"><div class="st">Режим обслуговування</div><div class="sd">Сайт бачитимете тільки ви, поки редагуєте</div></div>
+                <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+              </div>
+            </div>
+
+            <div class="set-group">
+              <h4>Копірайт і cookie</h4>
+              <div class="set-row">
+                <div class="si"><div class="st">Текст у футері</div></div>
+                <input type="text" value="pif paf production . @ 2026.">
+              </div>
+              <div class="set-row">
+                <div class="si"><div class="st">Повідомлення про cookies</div><div class="sd">Показувати банер відвідувачам з ЄС</div></div>
+                <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12l5 5L20 6"/></svg>
+  <span id="toastText">Збережено</span>
+</div>
+
+<div class="modal-backdrop" id="capModalBackdrop">
+  <div class="modal-card">
+    <h4>Підпис до фото</h4>
+    <p>У плитці зʼявиться як підказка при наведенні; у вертикальному чи горизонтальному скролі — текстом поверх фото.</p>
+    <textarea id="capModalInput" placeholder="Короткий опис…"></textarea>
+    <div class="modal-actions">
+      <button class="btn subtle" id="capModalCancel">Скасувати</button>
+      <button class="btn primary" id="capModalSave">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- icons ---------------- */
+  const ICONS = {
+    category: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>',
+    content: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h4"/></svg>',
+    link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9.5 14.5l5-5M8 16l-2 2a3.5 3.5 0 01-5-5l3-3a3.5 3.5 0 015 0M16 8l2-2a3.5 3.5 0 015 5l-3 3a3.5 3.5 0 01-5 0"/></svg>',
+    spacer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h16M4 16h16"/></svg>',
+    text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 6h14M5 12h14M5 18h9"/></svg>',
+    columns: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="4" width="7.5" height="16" rx="1"/><rect x="13" y="4" width="7.5" height="16" rx="1"/></svg>',
+    gallery: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="10" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg>',
+    media: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="15" rx="1.5"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 16l-5.5-5-8 7"/></svg>',
+    grip: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="6" r="1.4"/><circle cx="8" cy="12" r="1.4"/><circle cx="8" cy="18" r="1.4"/><circle cx="16" cy="6" r="1.4"/><circle cx="16" cy="12" r="1.4"/><circle cx="16" cy="18" r="1.4"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v12a1.5 1.5 0 01-1.5 1.5h-7A1.5 1.5 0 017 19V7"/></svg>',
+    dup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M5 15V5a1 1 0 011-1h10"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
+    video: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+    up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 15l6-6 6 6"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 12l5 5L20 6"/></svg>',
+    upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>',
+    close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  };
+
+  /* ---------------- thumbnail generator (no external images) ---------------- */
+  const PALETTE = [
+    ['#8a5a3c','#c98a52'], ['#3e4a3d','#7c9473'], ['#5c2e28','#a85a3f'],
+    ['#2f3d4a','#5f89a3'], ['#4a3b2f','#8c6a4a'], ['#6b1f21','#b23a2a'],
+    ['#3a3a34','#8f8a7a'], ['#274b4f','#4f8f92'], ['#5a4a1f','#c9a23f'],
+  ];
+  function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return Math.abs(h); }
+  function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function makeThumb(seed, w, h){
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    const ctx=c.getContext('2d');
+    const [c1,c2]=PALETTE[hashStr(seed)%PALETTE.length];
+    const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,c1); g.addColorStop(1,c2);
+    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+    ctx.globalAlpha=.08; ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(1,w*0.02);
+    for(let i=-h;i<w;i+=Math.max(10,w*0.09)){ ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i+h,h); ctx.stroke(); }
+    ctx.globalAlpha=1;
+    return c.toDataURL('image/jpeg',0.85);
+  }
+
+  /* ---------------- seed data ---------------- */
+  const ASPECTS = [[4,3],[3,4],[1,1],[3,2],[16,9],[2,3]];
+  function mkMedia(name, type, aIdx, date){
+    const [aw,ah]=ASPECTS[aIdx%ASPECTS.length];
+    return { id:'m'+(++mkMedia.n), name, type, w:aw, h:ah, date, src: makeThumb(name, aw*80, ah*80) };
+  }
+  mkMedia.n=0;
+
+  const libSeedNames = [
+    ["Schweppes_coctails_01.jpg","photo",0],["Schweppes_coctails_02.jpg","photo",1],
+    ["Добрик_04.jpg","photo",2],["MHP_Sultanah_hero.jpg","photo",4],
+    ["MHP_Qualiko_03.jpg","photo",0],["Ambassador_Premium_02.jpg","photo",3],
+    ["AVK_01.jpg","photo",1],["Bravolli_pack.jpg","photo",5],
+    ["Chumak_Mayonese_01.jpg","photo",0],["Novus_flags_02.jpg","photo",3],
+    ["Recept_Pasta_Feta.mp4","video",4],["Recept_Vitelo_tonata.mp4","video",4],
+    ["Flagman_calendar_03.jpg","photo",1],["Cremoire_01.jpg","photo",2],
+    ["Wine_Bureau_02.jpg","photo",5],["Grona_03.jpg","photo",0],
+    ["Farro_02.jpg","photo",3],["ISG_04.jpg","photo",1],
+    ["Giros_vegan_meat.mp4","video",4],["Torchin_outdoor_01.jpg","photo",2],
+  ];
+  const library = libSeedNames.map((r,i)=> mkMedia(r[0], r[1], r[2], `2025-0${(i%9)+1}-1${i%9}`));
+
+  const galleryNames = ["Schweppes coctails","MHP. Sultanah","AVK","Bravolli","people & ...","video recipes"];
+
+  /* ---------------- pages / menu tree data ---------------- */
+  function blocksFor(kind){
+    if(kind==='contacts'){
+      return [
+        { id:'b1', type:'text', html:'<p><b>Pif Paf Production</b> — table-top photo &amp; video (Kyiv, Ukraine)<br>pifpafonline@gmail.com · +380 (67) 258 34 34</p>' },
+        { id:'b2', type:'columns', cols:2, values:['<b>International Producer</b><br>Vitaly Kukshin<br>kukshin@pifpaf.online','<b>Хочете обговорити проєкт?</b><br>Заповніть форму нижче — ми відповімо протягом дня.'] },
+      ];
+    }
+    if(kind==='video-recipes'){
+      return [
+        { id:'b3', type:'gallery', layout:'tile', media:['m11','m12','m19','m14','m3'] },
+      ];
+    }
+    return [ { id:'b'+Math.random().toString(36).slice(2,7), type:'gallery', layout:'tile', media:['m1','m2','m3','m4'] } ];
+  }
+
+  const pages = {
+    'home': { title:'Home / Best gallery', slug:'/', type:'content', blocks:[{id:'bh',type:'gallery',layout:'tile',media:['m1','m2','m3','m4','m5','m6','m7','m8']}] },
+    'food': { title:'food & drinks', slug:'/food-and-drinks', type:'category', children:['schweppes','dobryk','mhp-s'] },
+    'schweppes': { title:'Schweppes coctails', slug:'/schweppes-coctails', type:'content', blocks: blocksFor('def') },
+    'dobryk': { title:'Добрик', slug:'/page-2', type:'content', blocks: blocksFor('def') },
+    'mhp-s': { title:'MHP. Sultanah', slug:'/mhp-sultanah', type:'content', blocks: blocksFor('def') },
+    'people': { title:'people & ...', slug:'/people-and', type:'content', blocks: blocksFor('def') },
+    'pack': { title:'pack', slug:'/pack', type:'category', children:['bkk','avk-pack'] },
+    'bkk': { title:'BKK + Ektor Bravo Cakes', slug:'/bkk', type:'content', blocks: blocksFor('def') },
+    'avk-pack': { title:'AVK', slug:'/avk', type:'content', blocks: blocksFor('def') },
+    'video': { title:'video recipes', slug:'/video-recipes', type:'content', blocks: blocksFor('video-recipes') },
+    'contacts': { title:'contacts', slug:'/contacts', type:'content', blocks: blocksFor('contacts') },
+    'studio': { title:"our studio 'KitchenKyiv'", type:'link', url:'https://www.kitchenkyiv.in.ua/' },
+    'sp1': { title:'Роздільник', type:'spacer' },
+  };
+  const menuOrder = ['home','food','people','pack','video','sp1','contacts','studio'];
+
+  let selectedPage = 'home';
+  let openCats = { food:true };
+  let capEditCtx = null; // { blockId, mediaId } of the caption currently being edited in the modal
+
+  /* ---------------- tree render ---------------- */
+  function typeIcon(t){ return ICONS[t==='category'?'category': t==='link'?'link': t==='spacer'?'spacer':'content']; }
+
+  function renderTree(){
+    const root = document.getElementById('tree');
+    root.innerHTML = menuOrder.map(id=>nodeHTML(id)).join('');
+  }
+  function nodeHTML(id){
+    const pg = pages[id];
+    if(pg.type==='category'){
+      const open = !!openCats[id];
+      return `<li class="tree-node ${open?'open':''}" data-id="${id}">
+        <div class="tree-row ${open?'open':''} ${selectedPage===id?'selected':''}" data-id="${id}" data-cat="1">
+          <span class="chev">${ICONS.up}</span><span class="ticon">${typeIcon('category')}</span>
+          <span class="tlabel">${pg.title}</span><span class="tcount">${pg.children.length}</span>
+        </div>
+        <ul class="tree-children">${pg.children.map(c=>nodeHTML(c)).join('')}</ul>
+      </li>`;
+    }
+    return `<li class="tree-node" data-id="${id}">
+      <div class="tree-row ${selectedPage===id?'selected':''}" data-id="${id}">
+        <span class="chev" style="visibility:hidden">${ICONS.up}</span><span class="ticon">${typeIcon(pg.type)}</span>
+        <span class="tlabel">${pg.title}</span>
+      </div>
+    </li>`;
+  }
+
+  document.getElementById('tree').addEventListener('click', (e)=>{
+    const row = e.target.closest('.tree-row'); if(!row) return;
+    const id = row.dataset.id;
+    if(row.dataset.cat){
+      openCats[id] = !openCats[id];
+      selectedPage = id;
+      renderTree();
+      renderBuilder();
+      return;
+    }
+    selectedPage = id;
+    renderTree();
+    renderBuilder();
+  });
+
+  /* ---------------- builder render ---------------- */
+  function mediaById(id){ return library.find(m=>m.id===id) || mkMedia(id,'photo',0,''); }
+
+  function galleryPreviewHTML(block){
+    const items = (block.media||[]).map(mediaById);
+    if(!items.length) return `<div class="empty-gal">Галерея порожня — додайте медіа</div>`;
+    if(block.layout==='vertical'){
+      return `<div class="g-vertical">${items.map(m=>flowItemHTML(m,block)).join('')}</div>`;
+    }
+    if(block.layout==='horizontal'){
+      return `<div class="g-horizontal">${items.map(m=>flowItemHTML(m,block)).join('')}</div>`;
+    }
+    // tile: justified rows computed after insert (see layoutJustified)
+    return `<div class="g-tile" data-justify="1" data-block-id="${block.id}" data-ids="${items.map(m=>m.id).join(',')}"></div>`;
+  }
+  function delBtnHTML(id){
+    return `<button class="g-del" type="button" data-media-id="${id}" title="Прибрати з галереї">${ICONS.close}</button>`;
+  }
+  // vertical/horizontal scroll: caption (if any) is an always-visible overlay bar on the image
+  function flowItemHTML(m, block){
+    const badge = m.type==='video' ? `<span class="media-badge">${ICONS.video}</span>` : '';
+    const cap = block.captions && block.captions[m.id];
+    const capHTML = cap ? `<div class="g-cap-overlay">${escapeHTML(cap)}</div>` : '';
+    return `<div class="g-item" draggable="true" data-media-id="${m.id}"><img src="${m.src}" alt="${m.name}">${badge}${capHTML}${delBtnHTML(m.id)}</div>`;
+  }
+
+  function layoutJustified(container, rowHeight){
+    const ids = container.dataset.ids.split(',').filter(Boolean);
+    const items = ids.map(mediaById);
+    const pg = pages[selectedPage];
+    const block = pg && pg.blocks && pg.blocks.find(x=>x.id===container.dataset.blockId);
+    const captions = (block && block.captions) || {};
+    const cw = container.clientWidth || 660;
+    const gap = 4;
+    let row = [], rowW = 0, top = 0;
+    container.innerHTML = '';
+    function flushRow(isLast){
+      if(!row.length) return;
+      const targetW = cw - gap*(row.length-1);
+      const scale = isLast ? Math.min(1.15, targetW/rowW) : targetW/rowW;
+      const h = rowHeight*scale;
+      let left = 0;
+      row.forEach(m=>{
+        const w = (m.w/m.h)*h;
+        const item = document.createElement('div');
+        item.className='g-item'; item.draggable=true; item.dataset.mediaId=m.id;
+        item.style.left = left+'px'; item.style.top = top+'px'; item.style.width = w+'px'; item.style.height = h+'px';
+        // tile layout: caption (if any) shows as a hover tooltip, matching a classic "alt on hover" feel
+        const cap = captions[m.id];
+        const capHTML = cap ? `<span class="g-cap-hint">${escapeHTML(cap)}</span>` : '';
+        item.innerHTML = `<img src="${m.src}" alt="${m.name}">${m.type==='video'?`<span class="media-badge">${ICONS.video}</span>`:''}${capHTML}${delBtnHTML(m.id)}`;
+        container.appendChild(item);
+        left += w+gap;
+      });
+      top += h+gap;
+      row=[]; rowW=0;
+    }
+    items.forEach((m)=>{
+      const w = (m.w/m.h)*rowHeight;
+      row.push(m); rowW += w + (row.length>1?gap:0);
+      if(rowW >= cw){ flushRow(false); }
+    });
+    flushRow(true);
+    container.style.height = top+'px';
+  }
+  function runJustify(){
+    document.querySelectorAll('.g-tile[data-justify]').forEach(el=>layoutJustified(el, 92));
+  }
+
+  function blockIcon(type){ return {text:ICONS.text, columns:ICONS.columns, gallery:ICONS.gallery, media:ICONS.media}[type]; }
+  function blockLabel(type){ return {text:'Текстовий блок', columns:'Багатоколонковий текст', gallery:'Галерея', media:'Окреме медіа'}[type]; }
+
+  function rtToolbarHTML(){
+    return `<div class="rt-toolbar">
+        <button type="button" data-cmd="bold" title="Жирний"><b>B</b></button>
+        <button type="button" data-cmd="italic" title="Курсив"><i>I</i></button>
+        <button type="button" data-cmd="createLink" title="Посилання">🔗</button>
+        <button type="button" data-cmd="insertUnorderedList" title="Список">≡</button>
+      </div>`;
+  }
+  function blockBodyHTML(block){
+    if(block.type==='text'){
+      return `${rtToolbarHTML()}<div class="rt-edit" contenteditable="true" data-ph="Введіть текст…">${block.html||''}</div>`;
+    }
+    if(block.type==='columns'){
+      return `<div class="col-seg">
+          <button class="seg-btn ${block.cols===2?'active':''}" data-cols="2">2 колонки</button>
+          <button class="seg-btn ${block.cols===3?'active':''}" data-cols="3">3 колонки</button>
+        </div>
+        <div class="cols">${Array.from({length:block.cols}).map((_,i)=>`
+          <div class="col-wrap">
+            ${rtToolbarHTML()}
+            <div class="col" contenteditable="true" data-ph="Текст колонки ${i+1}…">${block.values[i]||''}</div>
+          </div>`).join('')}</div>`;
+    }
+    if(block.type==='gallery'){
+      const count = (block.media||[]).length;
+      return `<div class="gal-toolbar">
+          <div class="col-seg">
+            <button class="seg-btn ${block.layout==='tile'?'active':''}" data-layout="tile">Плитка</button>
+            <button class="seg-btn ${block.layout==='vertical'?'active':''}" data-layout="vertical">Вертикальний скрол</button>
+            <button class="seg-btn ${block.layout==='horizontal'?'active':''}" data-layout="horizontal">Горизонтальний скрол</button>
+          </div>
+          <button class="btn subtle add-media-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg>Додати медіа</button>
+        </div>
+        <div class="gal-count">${count} елемент(ів)</div>
+        <div class="gal-preview" style="margin-top:6px;">${galleryPreviewHTML(block)}</div>
+        <div class="picker" data-picker>${pickerHTML()}</div>`;
+    }
+    if(block.type==='media'){
+      const m = block.mediaId ? mediaById(block.mediaId) : null;
+      const widthPct = {original:null, '100':100, '50':50, '33':33.333}[block.width];
+      const justify = {left:'flex-start', center:'center', right:'flex-end'}[block.align] || 'center';
+      const imgStyle = widthPct===null ? 'max-width:100%;width:auto;' : `width:${widthPct}%;`;
+      return `<div class="mb-stage" style="justify-content:${justify};">
+          ${m ? `<img src="${m.src}" alt="${m.name}" style="${imgStyle}">`
+              : `<div class="mb-empty">Медіа не обрано — вигляд зʼявиться тут</div>`}
+        </div>
+        <div class="media-block-body">
+          <div class="mb-controls">
+            <div class="field-row"><label>Ширина</label>
+              <div class="col-seg">
+                <button class="seg-btn ${block.width==='original'?'active':''}" data-width="original">Оригінал</button>
+                <button class="seg-btn ${block.width==='100'?'active':''}" data-width="100">100%</button>
+                <button class="seg-btn ${block.width==='50'?'active':''}" data-width="50">50%</button>
+                <button class="seg-btn ${block.width==='33'?'active':''}" data-width="33">33%</button>
+              </div>
+            </div>
+            <div class="field-row"><label>Вирівнювання</label>
+              <div class="col-seg">
+                <button class="seg-btn ${block.align==='left'?'active':''}" data-align="left">Ліворуч</button>
+                <button class="seg-btn ${block.align==='center'?'active':''}" data-align="center">По центру</button>
+                <button class="seg-btn ${block.align==='right'?'active':''}" data-align="right">Праворуч</button>
+              </div>
+            </div>
+            <button class="btn subtle add-media-btn" style="align-self:flex-start;">${m?'Замінити медіа':'Обрати медіа'}</button>
+            <div class="char-count">Пропорції файлу збережено автоматично${block.width==='original'?' · показано в натуральну ширину':''}</div>
+          </div>
+        </div>
+        <div class="picker" data-picker>${pickerHTML(true)}</div>`;
+    }
+    return '';
+  }
+
+  function pickerHTML(single){
+    const orderControl = single ? '' : `<div class="picker-order">
+        <label for="ord">Додавати нові:</label>
+        <select class="order-select">
+          <option value="end" selected>У кінець галереї</option>
+          <option value="start">На початок галереї</option>
+        </select>
+      </div>`;
+    return `${orderControl}<div class="picker-tabs">
+        <button class="picker-tab active" data-tab="upload">Завантажити нові</button>
+        <button class="picker-tab" data-tab="library">Обрати з медіатеки</button>
+      </div>
+      <div class="picker-view active" data-view="upload">
+        <div class="dropzone" data-drop>
+          ${ICONS.upload}<div><b>Перетягніть файли сюди</b> або натисніть, щоб обрати</div>
+          <input type="file" accept="image/*,video/*" multiple style="display:none">
+        </div>
+      </div>
+      <div class="picker-view" data-view="library">
+        <div class="pick-grid">${library.map(m=>`<div class="pick-item" data-id="${m.id}"><img src="${m.src}" alt="${m.name}"><span class="chk">${ICONS.check}</span></div>`).join('')}</div>
+        <div class="picker-actions"><button class="btn subtle cancel-pick">Скасувати</button><button class="btn primary confirm-pick">Додати обрані</button></div>
+      </div>`;
+  }
+
+  function inserterHTML(afterId){
+    return `<div class="inserter" data-after="${afterId||''}">
+      <div class="inserter-line"></div>
+      <button class="inserter-btn" type="button">${ICONS.plus}<span>Додати блок</span></button>
+      <div class="insert-menu">
+        <button data-type="text">${ICONS.text}Текстовий блок</button>
+        <button data-type="columns">${ICONS.columns}Багатоколонковий текст</button>
+        <button data-type="gallery">${ICONS.gallery}Блок галереї</button>
+        <button data-type="media">${ICONS.media}Окреме фото/відео</button>
+      </div>
+    </div>`;
+  }
+
+  function renderBuilder(){
+    const pane = document.getElementById('builderPane');
+    const pg = pages[selectedPage];
+    document.getElementById('crumbTitle').textContent = pg.title;
+    document.getElementById('crumbSub').textContent = pg.slug ? 'pifpaf.online'+pg.slug : (pg.type==='category'?'категорія · список підгалерей':'');
+
+    if(pg.type==='category'){
+      pane.innerHTML = `<div class="category-panel">
+        <h2>${pg.title}</h2>
+        <div class="slug-edit" style="margin-bottom:14px;">URL: pifpaf.online<input class="slug-input" value="${pg.slug||''}" placeholder="/nazva-katehorii"></div>
+        <p>Категорія показує список підгалерей зліва на сайті. Перетягніть, щоб змінити порядок.</p>
+        <ul class="cat-list">
+          ${pg.children.map(cid=>`<li><span class="grip">${ICONS.grip}</span><span class="name">${pages[cid].title}</span><span class="meta">галерея</span></li>`).join('')}
+        </ul>
+        <div style="margin-top:14px;"><button class="btn subtle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> Додати підгалерею</button></div>
+      </div>`;
+      return;
+    }
+    if(pg.type==='link' || pg.type==='spacer'){
+      pane.innerHTML = `<div class="category-panel">
+        <h2>${pg.title}</h2>
+        <p>${pg.type==='link' ? 'Пункт меню веде на зовнішню адресу і не має власного вмісту.' : 'Візуальний роздільник у меню, без посилання та вмісту.'}</p>
+        ${pg.type==='link' ? `<div class="set-row" style="border:1px solid var(--line);border-radius:4px;background:var(--surface);"><div class="si"><div class="st">URL</div></div><input type="text" value="${pg.url}" style="width:280px;"></div>` : ''}
+      </div>`;
+      return;
+    }
+
+    // content page with blocks
+    const isHome = selectedPage==='home';
+    let html = `<div class="builder-sheet">
+      <div class="page-head">
+        <input class="title" value="${pg.title}">
+        ${isHome
+          ? `<div class="slug">URL: <b>/</b> <span style="opacity:.75">— головна сторінка, адреса не редагується</span></div>`
+          : `<div class="slug-edit">URL: pifpaf.online<input class="slug-input" value="${pg.slug||''}" placeholder="/nazva-storinky"></div>`}
+      </div>`;
+    html += inserterHTML('');
+    pg.blocks.forEach(b=>{
+      html += `<div class="block" data-id="${b.id}">
+        <div class="block-bar">
+          <span class="grip" draggable="true" title="Перетягнути блок">${ICONS.grip}</span>
+          <span class="btype">${blockIcon(b.type)}${blockLabel(b.type)}</span>
+          <span class="spacer"></span>
+          <span class="block-actions">
+            <button class="icon-btn dup-block" title="Дублювати">${ICONS.dup}</button>
+            <button class="icon-btn del-block" title="Видалити">${ICONS.trash}</button>
+          </span>
+        </div>
+        <div class="block-body">${blockBodyHTML(b)}</div>
+      </div>`;
+      html += inserterHTML(b.id);
+    });
+    html += `</div>`;
+    pane.innerHTML = html;
+    runJustify();
+  }
+
+  /* ---------------- block interactions (event delegation) ---------------- */
+  document.getElementById('builderPane').addEventListener('click', (e)=>{
+    const pg = pages[selectedPage];
+    if(!pg || !pg.blocks) return;
+
+    // remove a single photo/video straight out of a gallery (hover delete icon)
+    const delMedia = e.target.closest('.g-del');
+    if(delMedia){
+      const blockEl = delMedia.closest('.block');
+      const b = pg.blocks.find(x=>x.id===blockEl.dataset.id);
+      const mid = delMedia.dataset.mediaId;
+      if(b && b.type==='gallery') b.media = (b.media||[]).filter(id=>id!==mid);
+      renderBuilder();
+      showToast('Прибрано з галереї');
+      return;
+    }
+
+    // click a photo/video inside a gallery to edit its caption
+    const capImg = e.target.closest('.g-item img');
+    if(capImg){
+      const itemEl = capImg.closest('.g-item');
+      const blockEl = itemEl.closest('.block');
+      const b = pg.blocks.find(x=>x.id===blockEl.dataset.id);
+      if(b && b.type==='gallery'){
+        capEditCtx = { blockId: b.id, mediaId: itemEl.dataset.mediaId };
+        const current = (b.captions && b.captions[capEditCtx.mediaId]) || '';
+        const input = document.getElementById('capModalInput');
+        input.value = current;
+        document.getElementById('capModalBackdrop').classList.add('show');
+        input.focus();
+      }
+      return;
+    }
+
+    // inserter open
+    const insBtn = e.target.closest('.inserter-btn');
+    if(insBtn){
+      document.querySelectorAll('.insert-menu.show').forEach(m=>{ if(m!==insBtn.nextElementSibling){ m.classList.remove('show'); } });
+      document.querySelectorAll('.inserter-btn.menu-open').forEach(b=>{ if(b!==insBtn) b.classList.remove('menu-open'); });
+      const menu = insBtn.nextElementSibling;
+      menu.classList.toggle('show'); insBtn.classList.toggle('menu-open');
+      return;
+    }
+    // insert choose type
+    const choose = e.target.closest('.insert-menu button');
+    if(choose){
+      const after = choose.closest('.inserter').dataset.after;
+      const type = choose.dataset.type;
+      const nb = newBlock(type);
+      const idx = pg.blocks.findIndex(b=>b.id===after);
+      pg.blocks.splice(idx+1, 0, nb);
+      renderBuilder();
+      return;
+    }
+    // delete / duplicate
+    const del = e.target.closest('.del-block');
+    if(del){
+      const id = del.closest('.block').dataset.id;
+      pg.blocks = pg.blocks.filter(b=>b.id!==id);
+      renderBuilder(); return;
+    }
+    const dup = e.target.closest('.dup-block');
+    if(dup){
+      const id = dup.closest('.block').dataset.id;
+      const idx = pg.blocks.findIndex(b=>b.id===id);
+      const copy = JSON.parse(JSON.stringify(pg.blocks[idx])); copy.id='b'+Math.random().toString(36).slice(2,7);
+      pg.blocks.splice(idx+1,0,copy);
+      renderBuilder(); return;
+    }
+    // column count switch
+    const colBtn = e.target.closest('[data-cols]');
+    if(colBtn){
+      const id = colBtn.closest('.block').dataset.id;
+      const b = pg.blocks.find(x=>x.id===id);
+      b.cols = parseInt(colBtn.dataset.cols,10);
+      while(b.values.length<b.cols) b.values.push('');
+      renderBuilder(); return;
+    }
+    // gallery layout switch
+    const layBtn = e.target.closest('[data-layout]');
+    if(layBtn){
+      const id = layBtn.closest('.block').dataset.id;
+      const b = pg.blocks.find(x=>x.id===id);
+      b.layout = layBtn.dataset.layout;
+      renderBuilder(); return;
+    }
+    // media block width/align
+    const wBtn = e.target.closest('[data-width]');
+    if(wBtn){ const id=wBtn.closest('.block').dataset.id; pg.blocks.find(x=>x.id===id).width=wBtn.dataset.width; renderBuilder(); return; }
+    const aBtn = e.target.closest('[data-align]');
+    if(aBtn){ const id=aBtn.closest('.block').dataset.id; pg.blocks.find(x=>x.id===id).align=aBtn.dataset.align; renderBuilder(); return; }
+
+    // open picker
+    const addMedia = e.target.closest('.add-media-btn');
+    if(addMedia){
+      const picker = addMedia.closest('.block-body').querySelector('[data-picker]');
+      picker.classList.toggle('show');
+      return;
+    }
+    // picker tabs
+    const tab = e.target.closest('.picker-tab');
+    if(tab){
+      const wrap = tab.closest('.picker');
+      wrap.querySelectorAll('.picker-tab').forEach(t=>t.classList.toggle('active', t===tab));
+      wrap.querySelectorAll('.picker-view').forEach(v=>v.classList.toggle('active', v.dataset.view===tab.dataset.tab));
+      return;
+    }
+    // picker library select
+    const pickItem = e.target.closest('.pick-item');
+    if(pickItem){
+      const wrap = pickItem.closest('.picker-view');
+      const single = wrap.closest('.block-body').querySelector('.mb-preview');
+      if(single){ wrap.querySelectorAll('.pick-item').forEach(i=>i.classList.remove('sel')); pickItem.classList.add('sel'); }
+      else pickItem.classList.toggle('sel');
+      return;
+    }
+    const cancelPick = e.target.closest('.cancel-pick');
+    if(cancelPick){ cancelPick.closest('.picker').classList.remove('show'); return; }
+    const confirmPick = e.target.closest('.confirm-pick');
+    if(confirmPick){
+      const blockEl = confirmPick.closest('.block');
+      const id = blockEl.dataset.id; const b = pg.blocks.find(x=>x.id===id);
+      const pickerEl = confirmPick.closest('.picker');
+      const ids = Array.from(pickerEl.querySelectorAll('.pick-item.sel')).map(i=>i.dataset.id);
+      const orderSel = pickerEl.querySelector('.order-select');
+      const order = orderSel ? orderSel.value : 'end';
+      if(b.type==='gallery'){ b.media = order==='start' ? ids.concat(b.media||[]) : (b.media||[]).concat(ids); }
+      else if(b.type==='media'){ if(ids[0]) b.mediaId = ids[0]; }
+      renderBuilder(); showToast('Медіа додано');
+      return;
+    }
+    // close menus on outside click within pane
+    if(!e.target.closest('.insert-menu')){
+      document.querySelectorAll('.insert-menu.show').forEach(m=>m.classList.remove('show'));
+      document.querySelectorAll('.inserter-btn.menu-open').forEach(b=>b.classList.remove('menu-open'));
+    }
+  });
+
+  document.getElementById('builderPane').addEventListener('input', (e)=>{
+    const pg = pages[selectedPage]; if(!pg) return;
+    if(e.target.classList.contains('title')){ pg.title = e.target.value; document.getElementById('crumbTitle').textContent = pg.title; renderTree(); return; }
+    if(e.target.classList.contains('slug-input')){
+      pg.slug = e.target.value;
+      document.getElementById('crumbSub').textContent = pg.slug ? 'pifpaf.online'+pg.slug : '';
+      return;
+    }
+    if(!pg.blocks) return;
+    const blockEl = e.target.closest('.block'); if(!blockEl) return;
+    const b = pg.blocks.find(x=>x.id===blockEl.dataset.id); if(!b) return;
+    if(e.target.classList.contains('rt-edit')) b.html = e.target.innerHTML;
+    if(e.target.classList.contains('col')){
+      const idx = Array.from(blockEl.querySelectorAll('.col')).indexOf(e.target);
+      b.values[idx] = e.target.innerHTML;
+    }
+  });
+
+  function newBlock(type){
+    const id = 'b'+Math.random().toString(36).slice(2,7);
+    if(type==='text') return { id, type, html:'' };
+    if(type==='columns') return { id, type, cols:2, values:['',''] };
+    if(type==='gallery') return { id, type, layout:'tile', media:[] };
+    if(type==='media') return { id, type, width:'original', align:'center', mediaId:null };
+  }
+
+  /* ---------------- drag reorder: blocks, and photos/videos inside a gallery ---------------- */
+  let dragId = null;              // block being reordered
+  let dragMediaId = null;         // media item being reordered inside a gallery block
+  let dragMediaBlockId = null;
+
+  document.getElementById('builderPane').addEventListener('dragstart', (e)=>{
+    const mediaEl = e.target.closest('[data-media-id]');
+    if(mediaEl){
+      dragMediaId = mediaEl.dataset.mediaId;
+      dragMediaBlockId = mediaEl.closest('.block').dataset.id;
+      mediaEl.classList.add('dragging-media');
+      e.stopPropagation();
+      return;
+    }
+    const block = e.target.closest('.block'); if(!block) return;
+    dragId = block.dataset.id; block.classList.add('dragging');
+  });
+  document.getElementById('builderPane').addEventListener('dragend', (e)=>{
+    const mediaEl = e.target.closest('[data-media-id]'); if(mediaEl) mediaEl.classList.remove('dragging-media');
+    const block = e.target.closest('.block'); if(block) block.classList.remove('dragging');
+    document.querySelectorAll('.g-item.drag-over').forEach(el=>el.classList.remove('drag-over'));
+  });
+  document.getElementById('builderPane').addEventListener('dragover', (e)=>{
+    e.preventDefault();
+    if(dragMediaId){
+      document.querySelectorAll('.g-item.drag-over').forEach(el=>el.classList.remove('drag-over'));
+      const t = e.target.closest('[data-media-id]');
+      if(t && t.dataset.mediaId!==dragMediaId) t.classList.add('drag-over');
+    }
+  });
+  document.getElementById('builderPane').addEventListener('drop', (e)=>{
+    e.preventDefault();
+    if(dragMediaId){
+      const target = e.target.closest('[data-media-id]');
+      if(target){
+        const blockEl = target.closest('.block');
+        const pg = pages[selectedPage];
+        const b = pg && pg.blocks && pg.blocks.find(x=>x.id===blockEl.dataset.id);
+        if(b && b.id===dragMediaBlockId && b.media && target.dataset.mediaId!==dragMediaId){
+          const from = b.media.indexOf(dragMediaId);
+          const to = b.media.indexOf(target.dataset.mediaId);
+          if(from>=0 && to>=0){ b.media.splice(to,0, b.media.splice(from,1)[0]); }
+        }
+      }
+      dragMediaId=null; dragMediaBlockId=null;
+      renderBuilder();
+      return;
+    }
+    const target = e.target.closest('.block'); if(!target || !dragId) return;
+    const pg = pages[selectedPage]; if(!pg||!pg.blocks) return;
+    const from = pg.blocks.findIndex(b=>b.id===dragId);
+    const to = pg.blocks.findIndex(b=>b.id===target.dataset.id);
+    if(from<0||to<0||from===to) return;
+    const [moved] = pg.blocks.splice(from,1);
+    pg.blocks.splice(to,0,moved);
+    dragId=null; renderBuilder();
+  });
+
+  window.addEventListener('resize', runJustify);
+
+  // rich-text toolbar: works for both the plain text block and every column of a multi-column block
+  document.getElementById('builderPane').addEventListener('mousedown', (e)=>{
+    const btn = e.target.closest('.rt-toolbar button');
+    if(!btn) return;
+    e.preventDefault(); // keep the text selection alive instead of losing it to the button's own focus
+    const cmd = btn.dataset.cmd;
+    if(cmd==='createLink'){
+      const url = window.prompt('URL посилання:', 'https://');
+      if(url) document.execCommand('createLink', false, url);
+    } else {
+      document.execCommand(cmd, false, null);
+    }
+  });
+
+  /* ---------------- media library panel ---------------- */
+  function renderLibGrid(filterText, filterType){
+    filterText = (filterText||'').toLowerCase();
+    const grid = document.getElementById('libGrid');
+    const items = library.filter(m=>{
+      if(filterType && filterType!=='all' && m.type!==filterType) return false;
+      if(filterText && !m.name.toLowerCase().includes(filterText)) return false;
+      return true;
+    });
+    document.getElementById('mediaCount').textContent = items.length+' файлів';
+    grid.innerHTML = items.slice().reverse().map(m=>`
+      <div class="lib-card" data-id="${m.id}">
+        <div class="lib-thumb"><img src="${m.src}" alt="${m.name}">${m.type==='video'?`<span class="media-badge">${ICONS.video}</span>`:''}</div>
+        <div class="lib-info"><div class="fn">${m.name}</div><div class="mono meta">${m.w}:${m.h} · ${m.date}</div></div>
+      </div>`).join('');
+  }
+  document.getElementById('mediaSearch').addEventListener('input', e=>renderLibGrid(e.target.value, document.getElementById('mediaTypeFilter').value));
+  document.getElementById('mediaTypeFilter').addEventListener('change', e=>renderLibGrid(document.getElementById('mediaSearch').value, e.target.value));
+
+  // Reads the *real* pixel dimensions of an uploaded file so its aspect ratio is preserved
+  // everywhere (a vertical upload must stay vertical, never stretched into a horizontal tile).
+  function readMediaDims(file){
+    return new Promise((resolve)=>{
+      const url = URL.createObjectURL(file);
+      if(file.type.startsWith('video')){
+        const v = document.createElement('video');
+        v.preload = 'metadata'; v.muted = true;
+        v.onloadedmetadata = ()=> resolve({ w:v.videoWidth||16, h:v.videoHeight||9, url });
+        v.onerror = ()=> resolve({ w:16, h:9, url });
+        v.src = url;
+      } else {
+        const img = new Image();
+        img.onload = ()=> resolve({ w:img.naturalWidth||4, h:img.naturalHeight||3, url });
+        img.onerror = ()=> resolve({ w:4, h:3, url });
+        img.src = url;
+      }
+    });
+  }
+
+  async function handleFilesAsync(fileList){
+    const files = Array.from(fileList);
+    const items = [];
+    for(const f of files){
+      const isVideo = f.type.startsWith('video');
+      const dims = await readMediaDims(f);
+      const id = 'up'+Date.now()+Math.random().toString(36).slice(2,7);
+      const item = { id, name:f.name, type:isVideo?'video':'photo', w:dims.w, h:dims.h, date:new Date().toISOString().slice(0,10), src:dims.url };
+      library.push(item);
+      items.push(item);
+    }
+    renderLibGrid(document.getElementById('mediaSearch').value, document.getElementById('mediaTypeFilter').value);
+    items.forEach(item=>{
+      const card = document.querySelector(`.lib-card[data-id="${item.id}"] .lib-thumb`);
+      if(card){
+        const bar = document.createElement('div'); bar.className='prog'; bar.innerHTML='<i></i>'; card.appendChild(bar);
+        let p=0; const t=setInterval(()=>{ p+=Math.random()*30+15; bar.querySelector('i').style.width=Math.min(p,100)+'%'; if(p>=100){ clearInterval(t); setTimeout(()=>bar.remove(),300);} },140);
+      }
+    });
+    if(files.length) showToast(files.length>1 ? `Завантажено ${files.length} файлів` : 'Файл завантажено');
+    return items;
+  }
+  const libDrop = document.getElementById('libDrop');
+  libDrop.addEventListener('click', ()=>document.getElementById('libInput').click());
+  document.getElementById('libBrowse').addEventListener('click', (e)=>{ e.stopPropagation(); document.getElementById('libInput').click(); });
+  document.getElementById('libInput').addEventListener('change', e=>handleFilesAsync(e.target.files));
+  ['dragenter','dragover'].forEach(ev=>libDrop.addEventListener(ev, e=>{ e.preventDefault(); libDrop.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev=>libDrop.addEventListener(ev, e=>{ e.preventDefault(); libDrop.classList.remove('drag'); }));
+  libDrop.addEventListener('drop', e=>{ if(e.dataTransfer.files.length) handleFilesAsync(e.dataTransfer.files); });
+
+  // dropzone inside the gallery/media block picker (event delegation, since pickers are re-created)
+  document.getElementById('builderPane').addEventListener('click', e=>{
+    const dz = e.target.closest('[data-drop]');
+    if(dz && !e.target.matches('input')) dz.querySelector('input[type=file]').click();
+  });
+  document.getElementById('builderPane').addEventListener('change', async e=>{
+    if(e.target.matches('[data-drop] input[type=file]')){
+      const blockEl = e.target.closest('.block');
+      const pg = pages[selectedPage]; const b = pg.blocks.find(x=>x.id===blockEl.dataset.id);
+      const pickerEl = e.target.closest('.picker');
+      const orderSel = pickerEl && pickerEl.querySelector('.order-select');
+      const order = orderSel ? orderSel.value : 'end';
+      const items = await handleFilesAsync(e.target.files);
+      const newIds = items.map(it=>it.id);
+      if(b.type==='gallery') b.media = order==='start' ? newIds.concat(b.media||[]) : (b.media||[]).concat(newIds);
+      else if(b.type==='media') b.mediaId = newIds[0];
+      renderBuilder();
+    }
+  });
+
+  /* ---------------- forms panel ---------------- */
+  const FIELD_TYPES = { text:'Текст', email:'Email', tel:'Телефон', textarea:'Багаторядковий текст', select:'Список', checkbox:'Чекбокс' };
+  let formFields = [
+    { id:'f1', type:'text', label:"Ім'я", required:true },
+    { id:'f2', type:'email', label:'Email', required:true },
+    { id:'f3', type:'tel', label:'Телефон', required:false },
+    { id:'f4', type:'textarea', label:'Повідомлення', required:true },
+  ];
+  function renderFields(){
+    document.getElementById('fieldsList').innerHTML = formFields.map(f=>`
+      <div class="field-card" draggable="true" data-id="${f.id}">
+        <span class="grip">${ICONS.grip}</span>
+        <div class="fi"><input class="flabel" value="${f.label}"><div class="ftype">${FIELD_TYPES[f.type]}</div></div>
+        <label class="req-toggle"><input type="checkbox" ${f.required?'checked':''} class="req-check" style="margin:0;"> обов'язкове</label>
+        <button class="icon-btn del-field">${ICONS.trash}</button>
+      </div>`).join('');
+    renderFormPreview();
+  }
+  function renderFormPreview(){
+    document.getElementById('formPreview').innerHTML = formFields.map(f=>{
+      const opt = f.required ? '' : ' <span class="opt">(необов’язково)</span>';
+      let input;
+      if(f.type==='textarea') input = `<textarea placeholder="${f.label}"></textarea>`;
+      else if(f.type==='select') input = `<select><option>Оберіть…</option></select>`;
+      else if(f.type==='checkbox') input = `<label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" style="width:auto;">${f.label}</label>`;
+      else input = `<input type="${f.type}" placeholder="${f.label}">`;
+      return f.type==='checkbox' ? `<div class="pf-field">${input}</div>` : `<div class="pf-field"><label>${f.label}${opt}</label>${input}</div>`;
+    }).join('');
+  }
+  document.getElementById('fieldsList').addEventListener('input', e=>{
+    if(e.target.classList.contains('flabel')){
+      const id = e.target.closest('.field-card').dataset.id;
+      formFields.find(f=>f.id===id).label = e.target.value;
+      renderFormPreview();
+    }
+  });
+  document.getElementById('fieldsList').addEventListener('change', e=>{
+    if(e.target.classList.contains('req-check')){
+      const id = e.target.closest('.field-card').dataset.id;
+      formFields.find(f=>f.id===id).required = e.target.checked;
+      renderFormPreview();
+    }
+  });
+  document.getElementById('fieldsList').addEventListener('click', e=>{
+    const del = e.target.closest('.del-field');
+    if(del){ const id = del.closest('.field-card').dataset.id; formFields = formFields.filter(f=>f.id!==id); renderFields(); }
+  });
+  const addFieldBtn = document.getElementById('addFieldBtn');
+  const fieldMenu = document.getElementById('fieldMenu');
+  fieldMenu.innerHTML = Object.entries(FIELD_TYPES).map(([k,v])=>`<button data-type="${k}">${v}</button>`).join('');
+  addFieldBtn.addEventListener('click', ()=> fieldMenu.classList.toggle('show'));
+  fieldMenu.addEventListener('click', e=>{
+    const btn = e.target.closest('button'); if(!btn) return;
+    formFields.push({ id:'f'+Math.random().toString(36).slice(2,7), type:btn.dataset.type, label:FIELD_TYPES[btn.dataset.type], required:false });
+    fieldMenu.classList.remove('show');
+    renderFields();
+  });
+  document.addEventListener('click', e=>{ if(!e.target.closest('#addFieldBtn') && !e.target.closest('#fieldMenu')) fieldMenu.classList.remove('show'); });
+
+  // field drag reorder
+  let dragFieldId=null;
+  document.getElementById('fieldsList').addEventListener('dragstart', e=>{ const c=e.target.closest('.field-card'); if(c){ dragFieldId=c.dataset.id; c.classList.add('dragging'); } });
+  document.getElementById('fieldsList').addEventListener('dragend', e=>{ const c=e.target.closest('.field-card'); if(c) c.classList.remove('dragging'); });
+  document.getElementById('fieldsList').addEventListener('dragover', e=>e.preventDefault());
+  document.getElementById('fieldsList').addEventListener('drop', e=>{
+    e.preventDefault(); const t=e.target.closest('.field-card'); if(!t||!dragFieldId) return;
+    const from = formFields.findIndex(f=>f.id===dragFieldId), to = formFields.findIndex(f=>f.id===t.dataset.id);
+    if(from<0||to<0||from===to) return;
+    const [mv]=formFields.splice(from,1); formFields.splice(to,0,mv); dragFieldId=null; renderFields();
+  });
+
+  /* ---------------- rail / section switching ---------------- */
+  document.querySelectorAll('.rail-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.rail-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const sec = btn.dataset.section;
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      document.getElementById('panel-'+sec).classList.add('active');
+      const titles = { pages:['Сторінки сайту','pifpaf.online'], media:['Медіатека','Усі фото та відео'], forms:['Конструктор форм','Форма зворотного зв’язку'], settings:['Налаштування сайту','pifpaf.online'] };
+      document.getElementById('crumbTitle').textContent = titles[sec][0];
+      document.getElementById('crumbSub').textContent = titles[sec][1];
+      document.getElementById('topActions').style.display = sec==='pages' ? 'flex' : (sec==='settings'?'none':'flex');
+      if(sec==='pages'){ document.getElementById('crumbTitle').textContent = pages[selectedPage].title; document.getElementById('crumbSub').textContent = pages[selectedPage].slug? 'pifpaf.online'+pages[selectedPage].slug : ''; }
+      if(sec==='media') runJustify();
+    });
+  });
+
+  document.getElementById('collapseBtn').addEventListener('click', ()=>{
+    document.getElementById('rail').classList.toggle('collapsed');
+  });
+
+  document.getElementById('treeToggle').addEventListener('click', ()=>{
+    document.getElementById('treePane').classList.toggle('collapsed');
+    document.getElementById('pagesLayout').classList.toggle('tree-collapsed');
+    setTimeout(runJustify, 180); // let the width transition finish before recomputing justified rows
+  });
+
+  function showToast(text){
+    const t = document.getElementById('toast');
+    document.getElementById('toastText').textContent = text;
+    t.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>t.classList.remove('show'), 2200);
+  }
+  document.getElementById('saveBtn').addEventListener('click', ()=>showToast('Збережено'));
+  document.getElementById('previewBtn').addEventListener('click', ()=>showToast('Відкриваємо сайт у новій вкладці…'));
+
+  /* ---------------- caption modal ---------------- */
+  function closeCapModal(){
+    document.getElementById('capModalBackdrop').classList.remove('show');
+    capEditCtx = null;
+  }
+  document.getElementById('capModalSave').addEventListener('click', ()=>{
+    if(!capEditCtx) return;
+    const pg = pages[selectedPage];
+    const b = pg.blocks.find(x=>x.id===capEditCtx.blockId);
+    if(b){
+      if(!b.captions) b.captions = {};
+      const text = document.getElementById('capModalInput').value.trim();
+      if(text) b.captions[capEditCtx.mediaId] = text; else delete b.captions[capEditCtx.mediaId];
+    }
+    closeCapModal();
+    renderBuilder();
+    showToast('Підпис збережено');
+  });
+  document.getElementById('capModalCancel').addEventListener('click', closeCapModal);
+  document.getElementById('capModalBackdrop').addEventListener('click', (e)=>{
+    if(e.target.id==='capModalBackdrop') closeCapModal();
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape' && document.getElementById('capModalBackdrop').classList.contains('show')) closeCapModal();
+  });
+
+  /* ---------------- init ---------------- */
+  renderTree();
+  renderBuilder();
+  renderLibGrid('','all');
+  renderFields();
+})();
+</script>
