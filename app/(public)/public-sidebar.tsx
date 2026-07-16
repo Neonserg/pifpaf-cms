@@ -14,17 +14,6 @@ function nodeHref(node: PageNode): string | null {
   return null;
 }
 
-function findActiveAncestors(nodes: PageNode[], pathname: string, trail: string[] = []): string[] | null {
-  for (const node of nodes) {
-    if (nodeHref(node) === pathname) return trail;
-    if (node.children.length) {
-      const found = findActiveAncestors(node.children, pathname, [...trail, node.id]);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
 export default function PublicSidebar({
   tree,
   collapsedDefault,
@@ -36,8 +25,12 @@ export default function PublicSidebar({
   const [collapsed, setCollapsed] = useState(collapsedDefault);
   const [hydrated, setHydrated] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setMobileOpen(false);
+  }
 
   useEffect(() => {
     function syncFromStorage() {
@@ -58,26 +51,6 @@ export default function PublicSidebar({
     document.documentElement.setAttribute("data-theme", theme);
     window.localStorage.setItem("pifpaf-theme", theme);
   }, [theme, hydrated]);
-
-  useEffect(() => {
-    function syncActiveAncestors() {
-      const ancestors = findActiveAncestors(tree, pathname);
-      if (ancestors?.length) {
-        setExpanded((prev) => new Set([...prev, ...ancestors]));
-      }
-      setMobileOpen(false);
-    }
-    syncActiveAncestors();
-  }, [pathname, tree]);
-
-  function toggleExpand(id: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   function renderNode(node: PageNode, depth: number) {
     const indent = 12 + depth * 14;
@@ -102,27 +75,6 @@ export default function PublicSidebar({
       );
     }
 
-    if (node.type === "category") {
-      const isExpanded = expanded.has(node.id);
-      return (
-        <li key={node.id}>
-          <button
-            type="button"
-            className="public-nav-item public-nav-category"
-            style={{ paddingLeft: indent }}
-            onClick={() => toggleExpand(node.id)}
-            aria-expanded={isExpanded}
-          >
-            <span className={`public-nav-caret${isExpanded ? " open" : ""}`} aria-hidden="true" />
-            {node.title}
-          </button>
-          {isExpanded && node.children.length > 0 && (
-            <ul className="public-nav-children">{node.children.map((child) => renderNode(child, depth + 1))}</ul>
-          )}
-        </li>
-      );
-    }
-
     const href = nodeHref(node);
     if (!href) return null;
     const active = pathname === href;
@@ -131,7 +83,7 @@ export default function PublicSidebar({
         <Link href={href} className={`public-nav-item${active ? " active" : ""}`} style={{ paddingLeft: indent }}>
           {node.title}
         </Link>
-        {node.children.length > 0 && (
+        {node.type !== "category" && node.children.length > 0 && (
           <ul className="public-nav-children">{node.children.map((child) => renderNode(child, depth + 1))}</ul>
         )}
       </li>
