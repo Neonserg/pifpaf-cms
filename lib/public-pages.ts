@@ -41,7 +41,7 @@ export const getPublicSiteData = cache(async (): Promise<PublicSiteData> => {
 
   for (const page of allPages) {
     if (page.is_home && page.type === "content") homePage = page;
-    if (page.type !== "content") continue;
+    if (page.type !== "content" && page.type !== "category") continue;
     const fullPath = computeFullPath(page, byId);
     if (fullPath !== null) pathMap.set(fullPath, page);
   }
@@ -61,7 +61,7 @@ export const getPublicSiteData = cache(async (): Promise<PublicSiteData> => {
     const children = byParent.get(parentId) ?? [];
     return children.map((page) => ({
       ...page,
-      fullPath: page.type === "content" ? computeFullPath(page, byId) : null,
+      fullPath: page.type === "content" || page.type === "category" ? computeFullPath(page, byId) : null,
       children: buildNodes(page.id),
     }));
   }
