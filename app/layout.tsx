@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "pifpaf-cms — Phase 0 scaffold",
-  description: "Foundation scaffold for the pifpaf.online CMS rebuild.",
+  title: "pifpaf",
+  description: "pifpaf.online — фотопортфоліо",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

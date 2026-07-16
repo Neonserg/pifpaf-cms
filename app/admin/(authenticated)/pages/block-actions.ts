@@ -6,6 +6,11 @@ import type { Json } from "@/lib/supabase/database.types";
 
 export type BlockType = "text" | "columns" | "gallery" | "media";
 
+export type TextData = { html: string };
+export type ColumnsData = { cols: 2 | 3; values: string[] };
+export type GalleryData = { layout: "tile" | "vertical" | "horizontal"; media: string[]; captions: Record<string, string> };
+export type MediaBlockData = { mediaId: string | null; width: "original" | "100" | "50" | "33"; align: "left" | "center" | "right" };
+
 function defaultData(type: BlockType): Json {
   if (type === "text") return { html: "" };
   if (type === "columns") return { cols: 2, values: ["", ""] };

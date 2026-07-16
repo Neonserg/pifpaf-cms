@@ -11,16 +11,16 @@ import {
   reorderBlocks,
   updateBlockData,
   type BlockType,
+  type TextData,
+  type ColumnsData,
+  type GalleryData,
+  type MediaBlockData,
 } from "./block-actions";
 import { recordUploadedMedia } from "../media/actions";
+import { computeJustified } from "@/lib/gallery-layout";
 
 type Block = Tables<"blocks">;
 type Media = Tables<"media">;
-
-type TextData = { html: string };
-type ColumnsData = { cols: 2 | 3; values: string[] };
-type GalleryData = { layout: "tile" | "vertical" | "horizontal"; media: string[]; captions: Record<string, string> };
-type MediaBlockData = { mediaId: string | null; width: "original" | "100" | "50" | "33"; align: "left" | "center" | "right" };
 
 const BLOCK_LABEL: Record<BlockType, string> = {
   text: "Текстовий блок",
@@ -77,44 +77,6 @@ async function uploadFiles(files: File[], onCreated: (row: Media) => void): Prom
     onCreated(row);
   }
   return created;
-}
-
-/** Justified-rows layout (rows aligned by height, no cropping) — same algorithm as the prototype. */
-function computeJustified(items: Media[], containerWidth: number, rowHeight: number, gap = 4) {
-  const positioned: { item: Media; left: number; top: number; width: number; height: number }[] = [];
-  let row: Media[] = [];
-  let rowWidth = 0;
-  let top = 0;
-
-  function flush(isLast: boolean) {
-    if (!row.length || containerWidth <= 0) {
-      row = [];
-      rowWidth = 0;
-      return;
-    }
-    const targetW = containerWidth - gap * (row.length - 1);
-    const scale = isLast ? Math.min(1.15, targetW / rowWidth) : targetW / rowWidth;
-    const h = rowHeight * scale;
-    let left = 0;
-    for (const it of row) {
-      const w = ((it.width ?? 4) / (it.height ?? 3)) * h;
-      positioned.push({ item: it, left, top, width: w, height: h });
-      left += w + gap;
-    }
-    top += h + gap;
-    row = [];
-    rowWidth = 0;
-  }
-
-  for (const it of items) {
-    const w = ((it.width ?? 4) / (it.height ?? 3)) * rowHeight;
-    row.push(it);
-    rowWidth += w + (row.length > 1 ? gap : 0);
-    if (rowWidth >= containerWidth) flush(false);
-  }
-  flush(true);
-
-  return { positions: positioned, totalHeight: top };
 }
 
 export default function BlockBuilder({

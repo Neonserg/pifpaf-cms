@@ -14,7 +14,7 @@
 
 - **GitHub**: [Neonserg/pifpaf-cms](https://github.com/Neonserg/pifpaf-cms) — окремий репозиторій, не повʼязаний з іншими проєктами акаунта. Публічний (потрібно для безкоштовного branch protection на приватних репо GitHub вимагає Pro).
 - **Supabase**: проєкт `pifpaf-cms` (ref `uncpsomdrijhosgrdgwr`, регіон eu-central-1, організація Naiv) — окремий від решти проєктів організації. URL: `https://uncpsomdrijhosgrdgwr.supabase.co`
-- **Vercel**: ще не підключено — плануємо під'єднати, коли з'явиться реальний Next.js-код для деплою.
+- **Хостинг фронтенду**: не Vercel — деплой на інший сервіс, ще не обрано остаточно.
 
 ## Розробка
 
