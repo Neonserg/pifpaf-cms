@@ -22,7 +22,7 @@ export default async function PublicPage({
 
   return (
     <article className="public-page">
-      <h1 className="public-page-title">{page.title}</h1>
+      {!page.is_home && <h1 className="public-page-title">{page.title}</h1>}
       <PublicBlocks pageId={page.id} />
       {form && <PublicForm form={form} />}
     </article>
