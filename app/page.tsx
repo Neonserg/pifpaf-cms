@@ -4,7 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 // page builder (Phase 2) lands, this will be replaced by the actual
 // block-rendering homepage.
 export default async function Home() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: settings, error } = await supabase
     .from("settings")
     .select("site_title, site_description")
