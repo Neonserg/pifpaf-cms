@@ -1,0 +1,191 @@
+/* Admin shell — ported from prototypes/admin_prototype.html. Keep in sync. */
+
+.admin-app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.rail {
+  width: 212px;
+  flex: none;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.16s ease;
+}
+.rail.collapsed {
+  width: 60px;
+}
+.rail-head {
+  padding: 16px 14px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  min-height: 20px;
+}
+.rail-mark {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 3px;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: -0.02em;
+}
+.rail-title {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.rail-title b {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+.rail-title span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rail.collapsed .rail-title {
+  display: none;
+}
+
+.rail-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.rail-btn {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius);
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-decoration: none;
+}
+.rail-btn svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+.rail-btn span {
+  font-size: 13px;
+}
+.rail-btn:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.rail-btn.active {
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 600;
+}
+.rail.collapsed .rail-btn span {
+  display: none;
+}
+.rail.collapsed .rail-btn {
+  justify-content: center;
+}
+
+.rail-foot {
+  padding: 8px;
+  border-top: 1px solid var(--line);
+}
+.collapse-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+}
+.collapse-btn:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.collapse-btn svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  transition: transform 0.16s ease;
+}
+.rail.collapsed .collapse-btn svg {
+  transform: rotate(180deg);
+}
+.rail.collapsed .collapse-btn span {
+  display: none;
+}
+
+.admin-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.admin-topbar {
+  height: 56px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.admin-content {
+  flex: 1;
+  overflow: auto;
+}
+
+.btn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 7px 13px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+}
+.btn:hover {
+  background: var(--surface-2);
+}
+.btn.subtle {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.btn.subtle:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
