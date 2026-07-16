@@ -4,6 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { PageNode } from "@/lib/public-pages";
+import { mediaPublicUrl } from "@/lib/media-url";
+
+const LOGO_URL = mediaPublicUrl("site-assets/logo.jpg");
 
 function nodeHref(node: PageNode): string | null {
   if (node.fullPath === "") return "/";
@@ -34,11 +37,13 @@ export default function PublicSidebar({
   const [hydrated, setHydrated] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
     function syncFromStorage() {
       const stored = window.localStorage.getItem("pifpaf-sidebar-collapsed");
       if (stored !== null) setCollapsed(stored === "1");
+      if (window.localStorage.getItem("pifpaf-theme") === "dark") setTheme("dark");
       setHydrated(true);
     }
     syncFromStorage();
@@ -47,6 +52,12 @@ export default function PublicSidebar({
   useEffect(() => {
     if (hydrated) window.localStorage.setItem("pifpaf-sidebar-collapsed", collapsed ? "1" : "0");
   }, [collapsed, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    document.documentElement.setAttribute("data-theme", theme);
+    window.localStorage.setItem("pifpaf-theme", theme);
+  }, [theme, hydrated]);
 
   useEffect(() => {
     function syncActiveAncestors() {
@@ -155,8 +166,26 @@ export default function PublicSidebar({
       <aside className={`public-sidebar${collapsed ? " collapsed" : ""}${mobileOpen ? " mobile-open" : ""}`}>
         <div className="public-sidebar-head">
           <Link href="/" className="public-brand">
-            pifpaf
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={LOGO_URL} alt="pifpaf" />
           </Link>
+          <button
+            type="button"
+            className="public-theme-toggle"
+            onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
+            aria-label={theme === "light" ? "Темна тема" : "Світла тема"}
+          >
+            {theme === "light" ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M12 3v2M12 19v2M5 5l1.4 1.4M17.6 17.6L19 19M3 12h2M19 12h2M5 19l1.4-1.4M17.6 6.4L19 5" />
+                <circle cx="12" cy="12" r="4" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M20 14.5A8 8 0 119.5 4 6.5 6.5 0 0020 14.5z" />
+              </svg>
+            )}
+          </button>
           <button
             type="button"
             className="public-collapse-btn"
