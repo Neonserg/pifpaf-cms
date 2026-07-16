@@ -1,0 +1,30 @@
+import type { Metadata } from "next";
+import { getPublicSiteData } from "@/lib/public-pages";
+import PublicSidebar from "./public-sidebar";
+import CookieNotice from "./cookie-notice";
+import "@/styles/public.css";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { settings } = await getPublicSiteData();
+  return {
+    title: settings?.site_title ?? "pifpaf",
+    description: settings?.site_description ?? undefined,
+    icons: settings?.favicon_url ? { icon: settings.favicon_url } : undefined,
+    openGraph: settings?.og_image_url ? { images: [settings.og_image_url] } : undefined,
+  };
+}
+
+export default async function PublicLayout({ children }: { children: React.ReactNode }) {
+  const { tree, settings } = await getPublicSiteData();
+
+  return (
+    <div className="public-shell">
+      <PublicSidebar tree={tree} collapsedDefault={settings?.sidebar_collapsed_default ?? false} />
+      <main className="public-main">
+        {children}
+        {settings?.copyright_text && <footer className="public-footer">{settings.copyright_text}</footer>}
+      </main>
+      {settings?.cookie_notice_enabled && <CookieNotice />}
+    </div>
+  );
+}
