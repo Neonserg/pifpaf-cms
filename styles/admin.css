@@ -189,3 +189,22 @@
   background: var(--surface-2);
   color: var(--ink);
 }
+
+/* gallery block: hover reveals the remove button / caption tooltip */
+.gallery-item-delete {
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+.gallery-item:hover .gallery-item-delete {
+  opacity: 1;
+}
+.gallery-item-delete:hover {
+  background: var(--rec) !important;
+}
+.gallery-item-caption-hint {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.gallery-item:hover .gallery-item-caption-hint {
+  opacity: 1;
+}

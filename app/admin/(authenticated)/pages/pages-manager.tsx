@@ -4,8 +4,11 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Tables } from "@/lib/supabase/database.types";
 import { createPage, deletePage, reorderPages, setHomePage, updatePage } from "./actions";
+import BlockBuilder from "./block-builder";
 
 type Page = Tables<"pages">;
+type Block = Tables<"blocks">;
+type Media = Tables<"media">;
 // The generated DB type widens the `type` column's check constraint to
 // `string`; re-declare the literal union ourselves for real exhaustiveness.
 type PageType = "category" | "content" | "link" | "spacer";
@@ -17,7 +20,15 @@ const TYPE_LABEL: Record<PageType, string> = {
   spacer: "Роздільник",
 };
 
-export default function PagesManager({ initialPages }: { initialPages: Page[] }) {
+export default function PagesManager({
+  initialPages,
+  initialBlocks,
+  initialMedia,
+}: {
+  initialPages: Page[];
+  initialBlocks: Block[];
+  initialMedia: Media[];
+}) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -26,6 +37,15 @@ export default function PagesManager({ initialPages }: { initialPages: Page[] })
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
   const [showAddForm, setShowAddForm] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [prevInitialMedia, setPrevInitialMedia] = useState(initialMedia);
+  const [media, setMedia] = useState(initialMedia);
+
+  // Resync from fresh server data (after router.refresh()) without an effect —
+  // adjusting state during render, per React's guidance for this exact case.
+  if (initialMedia !== prevInitialMedia) {
+    setPrevInitialMedia(initialMedia);
+    setMedia(initialMedia);
+  }
 
   const byParent = useMemo(() => {
     const map = new Map<string | "root", Page[]>();
@@ -152,7 +172,14 @@ export default function PagesManager({ initialPages }: { initialPages: Page[] })
 
       <div style={{ flex: 1, overflowY: "auto", background: "var(--paper)" }}>
         {selected ? (
-          <PageDetail key={selected.id} page={selected} onChanged={refresh} />
+          <PageDetail
+            key={selected.id}
+            page={selected}
+            blocks={initialBlocks.filter((b) => b.page_id === selected.id)}
+            media={media}
+            onMediaCreated={(row) => setMedia((m) => [row, ...m])}
+            onChanged={refresh}
+          />
         ) : (
           <div style={{ padding: 24, color: "var(--muted)" }}>Оберіть пункт меню зліва</div>
         )}
@@ -224,7 +251,19 @@ function AddPageForm({
   );
 }
 
-function PageDetail({ page, onChanged }: { page: Page; onChanged: () => void }) {
+function PageDetail({
+  page,
+  blocks,
+  media,
+  onMediaCreated,
+  onChanged,
+}: {
+  page: Page;
+  blocks: Block[];
+  media: Media[];
+  onMediaCreated: (row: Media) => void;
+  onChanged: () => void;
+}) {
   const [title, setTitle] = useState(page.title);
   const [slug, setSlug] = useState(page.slug ?? "");
   const [externalUrl, setExternalUrl] = useState(page.external_url ?? "");
@@ -239,7 +278,8 @@ function PageDetail({ page, onChanged }: { page: Page; onChanged: () => void }) 
   }
 
   return (
-    <div style={{ maxWidth: 560, margin: "0 auto", padding: "28px 24px" }}>
+    <div style={{ padding: "28px 24px 60px" }}>
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
       <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)", marginBottom: 6 }}>
         {TYPE_LABEL[page.type as PageType]}
       </div>
@@ -310,11 +350,18 @@ function PageDetail({ page, onChanged }: { page: Page; onChanged: () => void }) 
       </div>
 
       {saving && <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 10 }}>Зберігаємо…</p>}
+      </div>
 
       {page.type === "content" && (
-        <p style={{ marginTop: 24, fontSize: 12, color: "var(--muted)" }}>
-          Конструктор блоків (текст, галерея, медіа) зʼявиться у Фазі 2.
-        </p>
+        <div style={{ marginTop: 24 }}>
+          <BlockBuilder
+            pageId={page.id}
+            initialBlocks={blocks}
+            media={media}
+            onMediaCreated={onMediaCreated}
+            onChanged={onChanged}
+          />
+        </div>
       )}
     </div>
   );

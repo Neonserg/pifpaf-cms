@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { mediaPublicUrl } from "@/lib/media-url";
 import type { Tables } from "@/lib/supabase/database.types";
 import { deleteMedia, recordUploadedMedia } from "./actions";
 
@@ -82,11 +83,6 @@ export default function MediaLibrary({ initialMedia }: { initialMedia: Media[] }
       setItems((prev) => [row as Media, ...prev]);
       setUploading((u) => u.filter((n) => n !== file.name));
     }
-  }
-
-  function publicUrl(path: string) {
-    const supabase = createBrowserSupabaseClient();
-    return supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
   }
 
   async function handleDelete(item: Media) {
@@ -219,11 +215,11 @@ export default function MediaLibrary({ initialMedia }: { initialMedia: Media[] }
                 }}
               >
                 {m.type === "video" ? (
-                  <video src={publicUrl(m.storage_path)} style={{ width: "100%", height: "100%", objectFit: "cover" }} muted />
+                  <video src={mediaPublicUrl(m.storage_path)} style={{ width: "100%", height: "100%", objectFit: "cover" }} muted />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={publicUrl(m.storage_path)}
+                    src={mediaPublicUrl(m.storage_path)}
                     alt={m.filename}
                     style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                   />
