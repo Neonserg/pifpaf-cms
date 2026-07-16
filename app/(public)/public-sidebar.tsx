@@ -165,37 +165,6 @@ export default function PublicSidebar({
       )}
       <aside className={`public-sidebar${collapsed ? " collapsed" : ""}${mobileOpen ? " mobile-open" : ""}`}>
         <div className="public-sidebar-head">
-          <Link href="/" className="public-brand">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={LOGO_URL} alt="pifpaf" />
-          </Link>
-          <button
-            type="button"
-            className="public-theme-toggle"
-            onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
-            aria-label={theme === "light" ? "Темна тема" : "Світла тема"}
-          >
-            {theme === "light" ? (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M12 3v2M12 19v2M5 5l1.4 1.4M17.6 17.6L19 19M3 12h2M19 12h2M5 19l1.4-1.4M17.6 6.4L19 5" />
-                <circle cx="12" cy="12" r="4" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M20 14.5A8 8 0 119.5 4 6.5 6.5 0 0020 14.5z" />
-              </svg>
-            )}
-          </button>
-          <button
-            type="button"
-            className="public-collapse-btn"
-            onClick={() => setCollapsed((c) => !c)}
-            aria-label={collapsed ? "Розгорнути меню" : "Згорнути меню"}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d={collapsed ? "M9 5l7 7-7 7" : "M15 5l-7 7 7 7"} />
-            </svg>
-          </button>
           <button
             type="button"
             className="public-mobile-close"
@@ -206,6 +175,39 @@ export default function PublicSidebar({
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
           </button>
+          <Link href="/" className="public-brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={LOGO_URL} alt="pifpaf" />
+          </Link>
+          <div className="public-head-controls">
+            <button
+              type="button"
+              className="public-theme-toggle"
+              onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
+              aria-label={theme === "light" ? "Темна тема" : "Світла тема"}
+            >
+              {theme === "light" ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M12 3v2M12 19v2M5 5l1.4 1.4M17.6 17.6L19 19M3 12h2M19 12h2M5 19l1.4-1.4M17.6 6.4L19 5" />
+                  <circle cx="12" cy="12" r="4" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M20 14.5A8 8 0 119.5 4 6.5 6.5 0 0020 14.5z" />
+                </svg>
+              )}
+            </button>
+            <button
+              type="button"
+              className="public-collapse-btn"
+              onClick={() => setCollapsed((c) => !c)}
+              aria-label={collapsed ? "Розгорнути меню" : "Згорнути меню"}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d={collapsed ? "M9 5l7 7-7 7" : "M15 5l-7 7 7 7"} />
+              </svg>
+            </button>
+          </div>
         </div>
         <ul className="public-nav-list">{tree.map((node) => renderNode(node, 0))}</ul>
       </aside>

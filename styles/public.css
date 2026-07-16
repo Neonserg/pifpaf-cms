@@ -40,26 +40,34 @@
 }
 
 .public-sidebar-head {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 0 16px 16px;
+  gap: 12px;
+  padding: 20px 16px 16px;
   border-bottom: 1px solid var(--line);
   margin-bottom: 12px;
 }
 
 .public-brand {
-  display: block;
+  display: flex;
+  justify-content: center;
   text-decoration: none;
-  flex: 1;
-  overflow: hidden;
+  max-width: 100%;
 }
 
 .public-brand img {
   display: block;
   max-width: 100%;
-  height: 32px;
+  height: 48px;
   width: auto;
+}
+
+.public-head-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .public-collapse-btn,
@@ -89,6 +97,9 @@
 
 .public-mobile-close {
   display: none;
+  position: absolute;
+  top: 12px;
+  right: 12px;
 }
 
 .public-nav-list,
@@ -163,7 +174,7 @@
 .public-main {
   flex: 1;
   min-width: 0;
-  padding: 40px 32px 80px;
+  padding: 22px 32px 80px;
 }
 
 .public-page-title {
