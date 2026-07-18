@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { mediaPublicUrl } from "@/lib/media-url";
+import { mediaThumbUrl } from "@/lib/media-url";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { GalleryData } from "@/app/admin/(authenticated)/pages/block-actions";
 
@@ -44,7 +44,7 @@ export default async function CategoryIndex({ pages, basePath }: { pages: Page[]
             <Link href={`/${basePath}/${page.slug}`} className="public-category-thumb">
               {thumb && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={mediaPublicUrl(thumb.storage_path)} alt="" loading="lazy" />
+                <img src={mediaThumbUrl(thumb.storage_path, 600)} alt="" loading="lazy" decoding="async" />
               )}
               <span>{page.title}</span>
             </Link>

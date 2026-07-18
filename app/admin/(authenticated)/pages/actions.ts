@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { requireAdminClient } from "@/lib/supabase/guard";
 import type { TablesInsert, TablesUpdate } from "@/lib/supabase/database.types";
 
 async function client() {
-  return createServerSupabaseClient();
+  return requireAdminClient();
 }
 
 export async function createPage(input: {
