@@ -4,6 +4,9 @@ import PublicSidebar from "./public-sidebar";
 import CookieNotice from "./cookie-notice";
 import "@/styles/public.css";
 
+// Keep in sync with the page-level revalidate in [[...slug]]/page.tsx.
+export const revalidate = 300;
+
 export async function generateMetadata(): Promise<Metadata> {
   const { settings } = await getPublicSiteData();
   return {

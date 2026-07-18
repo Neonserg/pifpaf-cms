@@ -24,6 +24,7 @@ async function reindex(pageId: string, orderedIds: string[]) {
     orderedIds.map((id, i) => supabase.from("blocks").update({ sort_order: i }).eq("id", id))
   );
   revalidatePath("/admin/pages");
+  revalidatePath("/", "layout");
 }
 
 export async function createBlock(pageId: string, type: BlockType, afterBlockId: string | null) {
@@ -56,6 +57,7 @@ export async function updateBlockData(blockId: string, data: Json) {
   const { error } = await supabase.from("blocks").update({ data }).eq("id", blockId);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/pages");
+  revalidatePath("/", "layout");
 }
 
 export async function deleteBlock(pageId: string, blockId: string) {
@@ -63,6 +65,7 @@ export async function deleteBlock(pageId: string, blockId: string) {
   const { error } = await supabase.from("blocks").delete().eq("id", blockId);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/pages");
+  revalidatePath("/", "layout");
 }
 
 export async function duplicateBlock(pageId: string, blockId: string) {

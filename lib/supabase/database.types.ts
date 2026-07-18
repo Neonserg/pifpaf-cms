@@ -62,6 +62,7 @@ export type Database = {
           data: Json
           form_id: string
           id: string
+          ip_hash: string | null
           is_read: boolean
         }
         Insert: {
@@ -69,6 +70,7 @@ export type Database = {
           data: Json
           form_id: string
           id?: string
+          ip_hash?: string | null
           is_read?: boolean
         }
         Update: {
@@ -76,6 +78,7 @@ export type Database = {
           data?: Json
           form_id?: string
           id?: string
+          ip_hash?: string | null
           is_read?: boolean
         }
         Relationships: [
@@ -252,7 +255,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      submit_form: {
+        Args: { p_data: Json; p_form_id: string; p_ip_hash: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

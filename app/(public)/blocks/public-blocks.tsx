@@ -1,5 +1,5 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { mediaPublicUrl } from "@/lib/media-url";
+import { createPublicSupabaseClient } from "@/lib/supabase/public";
+import { mediaPublicUrl, mediaThumbUrl } from "@/lib/media-url";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import type { Tables } from "@/lib/supabase/database.types";
 import type {
@@ -20,6 +20,16 @@ const WIDTH_PCT: Record<MediaBlockData["width"], number | null> = {
   "33": 33.333,
 };
 
+// Requested thumbnail width per display width (~2x for retina, capped at the
+// content column). "original" can still be huge, so it gets the full-column
+// variant rather than the untouched source file.
+const THUMB_WIDTH: Record<MediaBlockData["width"], number> = {
+  original: 1400,
+  "100": 1400,
+  "50": 800,
+  "33": 600,
+};
+
 const JUSTIFY: Record<MediaBlockData["align"], string> = {
   left: "flex-start",
   center: "center",
@@ -27,7 +37,7 @@ const JUSTIFY: Record<MediaBlockData["align"], string> = {
 };
 
 export default async function PublicBlocks({ pageId }: { pageId: string }) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createPublicSupabaseClient();
   const { data: blocks } = await supabase
     .from("blocks")
     .select("*")
@@ -95,6 +105,7 @@ function PublicBlock({ block, mediaById }: { block: Block; mediaById: Map<string
           <video
             src={mediaPublicUrl(item.storage_path)}
             controls
+            preload="metadata"
             style={style}
             width={item.width ?? undefined}
             height={item.height ?? undefined}
@@ -102,8 +113,10 @@ function PublicBlock({ block, mediaById }: { block: Block; mediaById: Map<string
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={mediaPublicUrl(item.storage_path)}
+            src={mediaThumbUrl(item.storage_path, THUMB_WIDTH[data.width])}
             alt=""
+            loading="lazy"
+            decoding="async"
             style={{ ...style, display: "block" }}
             width={item.width ?? undefined}
             height={item.height ?? undefined}

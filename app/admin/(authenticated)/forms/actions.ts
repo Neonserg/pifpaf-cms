@@ -16,6 +16,7 @@ export async function createForm(title: string) {
     .single();
   if (error) throw new Error(error.message);
   revalidatePath("/admin/forms");
+  revalidatePath("/", "layout");
   return data;
 }
 
@@ -32,6 +33,7 @@ export async function updateForm(
   const { error } = await supabase.from("forms").update(payload).eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/forms");
+  revalidatePath("/", "layout");
 }
 
 export async function deleteForm(id: string) {
@@ -39,6 +41,7 @@ export async function deleteForm(id: string) {
   const { error } = await supabase.from("forms").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/forms");
+  revalidatePath("/", "layout");
 }
 
 export async function markSubmissionRead(id: string, isRead: boolean) {

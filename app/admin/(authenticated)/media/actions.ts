@@ -25,4 +25,6 @@ export async function deleteMedia(id: string, storagePath: string) {
   const { error } = await supabase.from("media").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/media");
+  // Deleted media may be referenced by public gallery/media blocks.
+  revalidatePath("/", "layout");
 }

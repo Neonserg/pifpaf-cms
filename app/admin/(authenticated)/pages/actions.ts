@@ -38,6 +38,7 @@ export async function createPage(input: {
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/pages");
+  revalidatePath("/", "layout");
 }
 
 export async function updatePage(id: string, fields: TablesUpdate<"pages">) {
@@ -45,6 +46,7 @@ export async function updatePage(id: string, fields: TablesUpdate<"pages">) {
   const { error } = await supabase.from("pages").update(fields).eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/pages");
+  revalidatePath("/", "layout");
 }
 
 export async function deletePage(id: string) {
@@ -52,6 +54,7 @@ export async function deletePage(id: string) {
   const { error } = await supabase.from("pages").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/pages");
+  revalidatePath("/", "layout");
 }
 
 export async function reorderPages(updates: { id: string; sort_order: number }[]) {
@@ -62,6 +65,7 @@ export async function reorderPages(updates: { id: string; sort_order: number }[]
     )
   );
   revalidatePath("/admin/pages");
+  revalidatePath("/", "layout");
 }
 
 export async function setHomePage(id: string) {
@@ -72,4 +76,5 @@ export async function setHomePage(id: string) {
   if (error) throw new Error(error.message);
   await supabase.from("settings").update({ home_page_id: id }).not("id", "is", null);
   revalidatePath("/admin/pages");
+  revalidatePath("/", "layout");
 }

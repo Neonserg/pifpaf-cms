@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { GalleryData } from "@/app/admin/(authenticated)/pages/block-actions";
 import { mediaPublicUrl, mediaThumbUrl } from "@/lib/media-url";
@@ -36,7 +36,9 @@ export default function PublicGallery({
   const [containerWidth, setContainerWidth] = useState(960);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  useEffect(() => {
+  // useLayoutEffect: measure before paint so the justified layout doesn't
+  // flash at the SSR-assumed 960px width and then visibly reflow.
+  useLayoutEffect(() => {
     if (layout !== "tile" || !containerRef.current) return;
     const el = containerRef.current;
     const measure = () => setContainerWidth(el.clientWidth);
@@ -104,7 +106,7 @@ function GalleryItem({
     <button type="button" className="public-gallery-item" style={style} onClick={onClick}>
       {item.type === "video" ? (
         <>
-          <video src={mediaPublicUrl(item.storage_path)} muted playsInline />
+          <video src={mediaPublicUrl(item.storage_path)} muted playsInline preload="metadata" />
           <span className="public-gallery-play" aria-hidden="true" />
         </>
       ) : (

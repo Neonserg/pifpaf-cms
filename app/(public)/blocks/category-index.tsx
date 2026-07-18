@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createPublicSupabaseClient } from "@/lib/supabase/public";
 import { mediaThumbUrl } from "@/lib/media-url";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { GalleryData } from "@/app/admin/(authenticated)/pages/block-actions";
@@ -9,7 +9,7 @@ type Page = Tables<"pages">;
 export default async function CategoryIndex({ pages, basePath }: { pages: Page[]; basePath: string }) {
   if (pages.length === 0) return null;
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = createPublicSupabaseClient();
   const { data: blocks } = await supabase
     .from("blocks")
     .select("page_id, data")

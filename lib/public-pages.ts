@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createPublicSupabaseClient } from "@/lib/supabase/public";
 import type { Tables } from "@/lib/supabase/database.types";
 
 export type Page = Tables<"pages">;
@@ -28,7 +28,7 @@ function computeFullPath(page: Page, byId: Map<string, Page>): string | null {
 }
 
 export const getPublicSiteData = cache(async (): Promise<PublicSiteData> => {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createPublicSupabaseClient();
   const [{ data: pages }, { data: settings }] = await Promise.all([
     supabase.from("pages").select("*").order("sort_order", { ascending: true }),
     supabase.from("settings").select("*").single(),
