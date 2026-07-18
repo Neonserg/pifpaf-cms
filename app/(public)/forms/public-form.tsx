@@ -10,6 +10,7 @@ type FormRow = Tables<"forms">;
 export default function PublicForm({ form }: { form: FormRow }) {
   const fields = (form.fields as unknown as FormField[]) ?? [];
   const [values, setValues] = useState<Record<string, string | boolean>>({});
+  const [honeypot, setHoneypot] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +30,7 @@ export default function PublicForm({ form }: { form: FormRow }) {
     setSubmitting(true);
     setError(null);
     try {
-      await submitForm(form.id, values);
+      await submitForm(form.id, values, honeypot);
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не вдалося надіслати форму");
@@ -42,6 +43,18 @@ export default function PublicForm({ form }: { form: FormRow }) {
     <form className="public-form" onSubmit={handleSubmit}>
       <h2 className="public-form-title">{form.title}</h2>
       {error && <p className="public-form-error">{error}</p>}
+      {/* Honeypot: hidden from users, tempting to bots. Kept out of the tab
+          order and off-screen; a filled value silently drops the submission. */}
+      <input
+        type="text"
+        name="company_website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        value={honeypot}
+        onChange={(e) => setHoneypot(e.target.value)}
+        style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+      />
       {fields.map((field) => (
         <div key={field.id} className="public-form-field">
           {field.type === "checkbox" ? (

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { GalleryData } from "@/app/admin/(authenticated)/pages/block-actions";
-import { mediaPublicUrl } from "@/lib/media-url";
+import { mediaPublicUrl, mediaThumbUrl } from "@/lib/media-url";
 import { computeJustified } from "@/lib/gallery-layout";
 import Lightbox from "./lightbox";
 
@@ -94,7 +94,7 @@ function GalleryItem({
         </>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={mediaPublicUrl(item.storage_path)} alt={caption ?? ""} loading="lazy" />
+        <img src={mediaThumbUrl(item.storage_path, 800)} alt={caption ?? ""} loading="lazy" decoding="async" />
       )}
       {caption && <span className="public-gallery-caption">{caption}</span>}
     </button>

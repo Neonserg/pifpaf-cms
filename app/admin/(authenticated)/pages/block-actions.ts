@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { requireAdminClient } from "@/lib/supabase/guard";
 import type { Json } from "@/lib/supabase/database.types";
 
 export type BlockType = "text" | "columns" | "gallery" | "media";
@@ -19,7 +19,7 @@ function defaultData(type: BlockType): Json {
 }
 
 async function reindex(pageId: string, orderedIds: string[]) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await requireAdminClient();
   await Promise.all(
     orderedIds.map((id, i) => supabase.from("blocks").update({ sort_order: i }).eq("id", id))
   );
@@ -27,7 +27,7 @@ async function reindex(pageId: string, orderedIds: string[]) {
 }
 
 export async function createBlock(pageId: string, type: BlockType, afterBlockId: string | null) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await requireAdminClient();
 
   const { data: existing } = await supabase
     .from("blocks")
@@ -52,21 +52,21 @@ export async function createBlock(pageId: string, type: BlockType, afterBlockId:
 }
 
 export async function updateBlockData(blockId: string, data: Json) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await requireAdminClient();
   const { error } = await supabase.from("blocks").update({ data }).eq("id", blockId);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/pages");
 }
 
 export async function deleteBlock(pageId: string, blockId: string) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await requireAdminClient();
   const { error } = await supabase.from("blocks").delete().eq("id", blockId);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/pages");
 }
 
 export async function duplicateBlock(pageId: string, blockId: string) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await requireAdminClient();
   const { data: original, error: fetchError } = await supabase
     .from("blocks")
     .select("type, data")
