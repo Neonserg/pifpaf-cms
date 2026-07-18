@@ -44,7 +44,7 @@ export default async function CategoryIndex({ pages, basePath }: { pages: Page[]
             <Link href={`/${basePath}/${page.slug}`} className="public-category-thumb">
               {thumb && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={mediaThumbUrl(thumb.storage_path, 600)} alt="" loading="lazy" decoding="async" />
+                <img src={mediaThumbUrl(thumb.storage_path, 500)} alt="" loading="lazy" decoding="async" />
               )}
               <span>{page.title}</span>
             </Link>

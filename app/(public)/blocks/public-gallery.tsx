@@ -12,6 +12,17 @@ type Media = Tables<"media">;
 const TILE_ROW_HEIGHT = 260;
 const HORIZONTAL_HEIGHT = 260;
 
+// Requested thumbnail width per layout (~2x the on-screen display size for
+// retina). Fixed per layout — not per item — so Supabase caches a small,
+// predictable set of transform variants. Full resolution is served only in the
+// lightbox. Effective only when NEXT_PUBLIC_IMAGE_TRANSFORM=on; otherwise
+// mediaThumbUrl falls back to the original.
+const THUMB_WIDTH: Record<GalleryData["layout"], number> = {
+  tile: 700, // rows ~260px tall, width varies with aspect
+  vertical: 1400, // full content-column width
+  horizontal: 600, // ~260px-tall row in a horizontal scroller
+};
+
 export default function PublicGallery({
   layout,
   items,
@@ -53,6 +64,7 @@ export default function PublicGallery({
                 key={item.id}
                 item={item}
                 caption={captions[item.id]}
+                thumbWidth={THUMB_WIDTH[layout]}
                 style={{ position: "absolute", left, top, width, height }}
                 onClick={() => setLightboxIndex(i)}
               />
@@ -62,6 +74,7 @@ export default function PublicGallery({
                 key={item.id}
                 item={item}
                 caption={captions[item.id]}
+                thumbWidth={THUMB_WIDTH[layout]}
                 style={layout === "horizontal" ? { height: HORIZONTAL_HEIGHT, flex: "none" } : { width: "100%" }}
                 onClick={() => setLightboxIndex(i)}
               />
@@ -78,11 +91,13 @@ function GalleryItem({
   item,
   caption,
   style,
+  thumbWidth,
   onClick,
 }: {
   item: Media;
   caption?: string;
   style: React.CSSProperties;
+  thumbWidth: number;
   onClick: () => void;
 }) {
   return (
@@ -94,7 +109,7 @@ function GalleryItem({
         </>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={mediaThumbUrl(item.storage_path, 800)} alt={caption ?? ""} loading="lazy" decoding="async" />
+        <img src={mediaThumbUrl(item.storage_path, thumbWidth)} alt={caption ?? ""} loading="lazy" decoding="async" />
       )}
       {caption && <span className="public-gallery-caption">{caption}</span>}
     </button>
