@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { mediaPublicUrl } from "@/lib/media-url";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import type { Tables } from "@/lib/supabase/database.types";
 import type {
   TextData,
@@ -63,7 +64,7 @@ export default async function PublicBlocks({ pageId }: { pageId: string }) {
 function PublicBlock({ block, mediaById }: { block: Block; mediaById: Map<string, Media> }) {
   if (block.type === "text") {
     const data = block.data as TextData;
-    return <div className="public-block public-block-text" dangerouslySetInnerHTML={{ __html: data.html }} />;
+    return <div className="public-block public-block-text" dangerouslySetInnerHTML={{ __html: sanitizeHtml(data.html) }} />;
   }
 
   if (block.type === "columns") {
@@ -71,7 +72,7 @@ function PublicBlock({ block, mediaById }: { block: Block; mediaById: Map<string
     return (
       <div className="public-block public-block-columns">
         {data.values.map((html, i) => (
-          <div key={i} className="public-block-column" dangerouslySetInnerHTML={{ __html: html }} />
+          <div key={i} className="public-block-column" dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
         ))}
       </div>
     );
