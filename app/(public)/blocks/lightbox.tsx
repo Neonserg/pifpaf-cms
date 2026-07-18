@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Tables } from "@/lib/supabase/database.types";
 import { mediaPublicUrl } from "@/lib/media-url";
 
@@ -18,14 +18,27 @@ export default function Lightbox({
   onClose: () => void;
 }) {
   const [index, setIndex] = useState(startIndex);
+  const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
     return () => {
       document.body.style.overflow = previousOverflow;
     };
   }, []);
+
+  // Prefetch the adjacent full-resolution photos so arrow navigation is instant.
+  useEffect(() => {
+    for (const offset of [1, -1]) {
+      const neighbor = items[(index + offset + items.length) % items.length];
+      if (neighbor && neighbor.type !== "video") {
+        const img = new Image();
+        img.src = mediaPublicUrl(neighbor.storage_path);
+      }
+    }
+  }, [index, items]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -41,8 +54,8 @@ export default function Lightbox({
   const caption = captions[item.id];
 
   return (
-    <div className="lightbox-overlay" onClick={onClose}>
-      <button type="button" className="lightbox-close" onClick={onClose} aria-label="Закрити">
+    <div className="lightbox-overlay" role="dialog" aria-modal="true" aria-label="Перегляд медіа" onClick={onClose}>
+      <button ref={closeRef} type="button" className="lightbox-close" onClick={onClose} aria-label="Закрити">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="M6 6l12 12M18 6L6 18" />
         </svg>

@@ -8,6 +8,18 @@ import { deleteMedia, recordUploadedMedia } from "./actions";
 
 type Media = Tables<"media">;
 
+// Per-type upload limits. The storage bucket enforces a hard 100 MB /
+// image+video-only cap server-side; the tighter 10 MB photo limit lives here.
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+
+function fileTooLargeMessage(file: File): string | null {
+  const isVideo = file.type.startsWith("video");
+  const limit = isVideo ? MAX_VIDEO_BYTES : MAX_PHOTO_BYTES;
+  if (file.size <= limit) return null;
+  return `${file.name}: ${isVideo ? "відео" : "фото"} завелике (${(file.size / 1024 / 1024).toFixed(1)} МБ, ліміт ${limit / 1024 / 1024} МБ)`;
+}
+
 function readDimensions(file: File): Promise<{ width: number; height: number }> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
@@ -55,7 +67,11 @@ export default function MediaLibrary({ initialMedia }: { initialMedia: Media[] }
 
   async function handleFiles(fileList: FileList | null) {
     if (!fileList || !fileList.length) return;
-    const files = Array.from(fileList);
+    const all = Array.from(fileList);
+    const rejected = all.map(fileTooLargeMessage).filter((m): m is string => m !== null);
+    if (rejected.length > 0) setUploadError(rejected.join("; "));
+    const files = all.filter((f) => fileTooLargeMessage(f) === null);
+    if (files.length === 0) return;
     setUploading((u) => [...u, ...files.map((f) => f.name)]);
 
     const supabase = createBrowserSupabaseClient();
