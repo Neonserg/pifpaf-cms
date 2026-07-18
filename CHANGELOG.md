@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+### Security
+- Надсилання публічних форм переведено з прямої INSERT-політики на Postgres-функцію `submit_form` (SECURITY DEFINER) з rate limit 5 заявок/10 хв на SHA-256-хеш IP; пряма вставка для anon закрита
+- Security-заголовки для всіх маршрутів (`next.config.mjs`): `X-Frame-Options: DENY`, CSP `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`
+- Ліміти завантаження медіа: bucket — 100 МБ і лише image/video MIME (Supabase), в адмінці — фото ≤ 10 МБ, відео ≤ 100 МБ
+- RLS-політики переструктуровано: розбиті по командах, обмежені роллю `authenticated`, initplan-safe `(select auth.uid())` — усі попередження Supabase advisors закриті
+
+### Performance
+- Публічні сторінки кешуються (SSG/ISR, `revalidate` 5 хв): читання через cookie-less Supabase-клієнт (`lib/supabase/public.ts`) + `generateStaticParams`; адмінські дії ревалідують публічний layout при публікації
+- Індекси на зовнішні ключі `forms.page_id` і `settings.home_page_id`
+- Медіа-блоки на публічній частині використовують мініатюри (`mediaThumbUrl`) з lazy loading; відео в галереях і блоках — `preload="metadata"`; лайтбокс префетчить сусідні фото
+
+### Added
+- SEO: per-page `<title>`/OpenGraph через `generateMetadata`, `sitemap.xml` (всі публічні сторінки), `robots.txt` (disallow `/admin`)
+- Лайтбокс: `role="dialog"`/`aria-modal`, фокус на кнопці закриття при відкритті
+
 ### Changed
 - Бічне меню: лого збільшене (+50%) і по центру колонки, іконки теми/згортання винесені окремим рядком під лого, менший верхній відступ над заголовками сторінок
 

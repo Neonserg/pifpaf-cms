@@ -8,22 +8,45 @@
 - **Фаза 1** — автентифікація адміна, дерево сторінок/меню, медіатека (bulk upload, реальні пропорції фото/відео)
 - **Фаза 2** — конструктор сторінок: текст, багатоколонковий текст, галерея (3 лайаути), окреме медіа
 - **Фаза 3** — публічна частина сайту (маршрутизація за деревом сторінок, бічне меню, рендер блоків, лайтбокс для галерей), налаштування сайту (`/admin/settings`), конструктор контактних форм (`/admin/forms`)
+- **Аудит оптимізації/безпеки/SEO** (18.07.2026, PR #15) — див. розділ нижче
 
 Наповнення контентом перенесено з поточного сайту pifpaf.online: структура верхнього рівня меню (`food & drinks`, `pack`, `people & ...`, `video recipes`, `contacts`, зовнішнє посилання на студію), головна сторінка (усі 165 фото з розділу Best Gallery), і всі підгалереї `food & drinks` (44) та `pack` (27) з оригінальними фото в нативній роздільності. `video recipes` навмисно не переносились — потребують окремого рішення (див. нижче).
+
+## Аудит 18.07.2026 (PR #15) — що змінилось і чому
+
+**Кешування публічної частини.** Публічні читання йдуть через cookie-less клієнт `lib/supabase/public.ts` (звичайний `createClient`, без сесії) — саме тому публічні сторінки більше не динамічні: `[[...slug]]/page.tsx` має `revalidate = 300` + `generateStaticParams`, усі ~77 сторінок пререндеряться (SSG/ISR). Адмінські дії (pages/blocks/forms/deleteMedia) додатково викликають `revalidatePath("/", "layout")`, тож публікація оновлює сайт одразу. **Важливо:** нічого в дереві `app/(public)` не повинно читати `cookies()`/`headers()` під час рендеру — це поверне динамічний рендеринг на кожен запит (у server actions можна).
+
+**Форми: захист від спаму.** Публічна вставка в `form_submissions` через пряму INSERT-політику видалена. Єдиний шлях — Postgres-функція `submit_form(p_form_id, p_data, p_ip_hash)` (SECURITY DEFINER): перевіряє існування форми і тримає ліміт 5 заявок/10 хв на IP (у БД зберігається лише SHA-256-хеш IP, колонка `ip_hash`). Advisors Supabase попереджають, що ця функція доступна anon — це навмисно, не «виправляти».
+
+**SEO.** Per-page `<title>`/OG через `generateMetadata` у `[[...slug]]/page.tsx`; `app/sitemap.ts` (всі сторінки з `pathMap`) і `app/robots.ts` (disallow `/admin`). Базовий URL — `NEXT_PUBLIC_SITE_URL`, фолбек `https://pifpaf.online`.
+
+**Security-заголовки** у `next.config.mjs`: `X-Frame-Options: DENY`, CSP `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`.
+
+**Медіа.** Bucket `media` обмежено на рівні Supabase: 100 МБ, лише `image/*`/`video/*`. В адмінці додатковий ліміт: фото ≤ 10 МБ, відео ≤ 100 МБ. Публічні медіа-блоки використовують `mediaThumbUrl` + `loading="lazy"`; відео — `preload="metadata"`; лайтбокс префетчить сусідні фото.
+
+**БД.** Індекси на `forms.page_id`, `settings.home_page_id`; RLS-політики переструктуровано: `FOR ALL`-політики розбиті на INSERT/UPDATE/DELETE, обмежені роллю `authenticated` з initplan-safe перевіркою `(select auth.uid())`. Усі попередження Supabase advisors закриті (крім навмисних, див. вище).
+
+**Деплой-урок:** міграції через MCP б'ють у продакшн-БД миттєво, а код їде тільки з мержем у main. Всі зміни, що ламають старий код (видалення політики/гранту), робити у два кроки: спершу адитивна міграція, після деплою — прибирання старого шляху.
+
+### Ручні кроки, які ще не зроблені (потрібен дашборд)
+
+- **Leaked Password Protection**: Supabase Dashboard → Authentication → Passwords — увімкнути (через API/MCP недоступно)
+- **`NEXT_PUBLIC_IMAGE_TRANSFORM=on`** у Vercel env: без нього `mediaThumbUrl` віддає оригінали замість мініатюр. Вмикати лише якщо тариф Supabase підтримує image transformations
+- **`NEXT_PUBLIC_SITE_URL`** у Vercel env — виставити фінальний домен, коли pifpaf.online переїде
 
 ## Що лишилось (за ТЗ, розділ 15)
 
 - Email-сповіщення про нові заявки з форм (зараз заявки бачить лише адмін у списку — це відповідає ТЗ, email опційний)
 - Обробка відеорецептів: у старій системі відео вставлені через YouTube iframe у підписі фото-елемента — потребує окремого рішення (нативне відео чи YouTube-вбудова)
-- Деплой на DigitalOcean App Platform + перенесення домену pifpaf.online
+- Перенесення домену pifpaf.online на Vercel-деплой (сайт уже працює в продакшні на тимчасовому домені `pifpaf-cms.vercel.app`; початковий план із DigitalOcean App Platform не реалізовувався)
 - Кросбраузерне/мобільне тестування "в бою" (структурно перевірено, але не на реальних пристроях)
 
 ## Доступи
 
 - **GitHub**: [Neonserg/pifpaf-cms](https://github.com/Neonserg/pifpaf-cms) — публічний репозиторій
 - **Supabase**: проєкт `pifpaf-cms` (ref `uncpsomdrijhosgrdgwr`), організація Naiv — доступ через [Supabase Dashboard](https://supabase.com/dashboard/project/uncpsomdrijhosgrdgwr)
+- **Vercel**: команда NAIV, проєкт `pifpaf-cms` — production-деплой з гілки `main` автоматично; тимчасовий публічний домен `pifpaf-cms.vercel.app` (гілкові аліаси закриті Vercel SSO)
 - **Адмінка сайту** (`/admin/login`): облікові дані зберігаються приватно у власника проєкту, тут не публікуються (репозиторій публічний)
-- **DigitalOcean**: акаунт власника проєкту, App Platform ще не налаштований
 
 ## Локальний запуск
 
