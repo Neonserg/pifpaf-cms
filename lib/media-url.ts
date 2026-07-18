@@ -21,5 +21,8 @@ export function mediaPublicUrl(storagePath: string) {
  */
 export function mediaThumbUrl(storagePath: string, width: number) {
   if (!IMAGE_TRANSFORM) return mediaPublicUrl(storagePath);
-  return `${SUPABASE_URL}/storage/v1/render/image/public/media/${storagePath}?width=${width}&quality=75`;
+  // resize=contain is required: with only `width`, Supabase keeps the original
+  // height and crops (cover) into a distorted vertical/horizontal slice.
+  // `contain` scales proportionally to the given width, preserving aspect ratio.
+  return `${SUPABASE_URL}/storage/v1/render/image/public/media/${storagePath}?width=${width}&resize=contain&quality=75`;
 }
