@@ -35,6 +35,7 @@
 - **Leaked Password Protection**: Supabase Dashboard → Authentication → Passwords — увімкнути (через API/MCP недоступно)
 - **`NEXT_PUBLIC_IMAGE_TRANSFORM=on`** у Vercel env: без нього `mediaThumbUrl` віддає оригінали замість мініатюр. Вмикати лише якщо тариф Supabase підтримує image transformations
 - **`NEXT_PUBLIC_SITE_URL`** у Vercel env — виставити фінальний домен, коли pifpaf.online переїде
+- **Auth Site URL / Redirect URLs**: Supabase Dashboard → Authentication → URL Configuration — досі стоїть дефолтний `http://localhost:3000`, тому лінки скидання пароля й magic link ведуть на localhost. Виставити Site URL на `https://pifpaf-cms.vercel.app` (пізніше — фінальний домен) і додати його в Redirect URLs
 
 ## Що лишилось (за ТЗ, розділ 15)
 
