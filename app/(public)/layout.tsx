@@ -23,7 +23,12 @@ export default async function PublicLayout({ children }: { children: React.React
 
   return (
     <div className="public-shell">
-      <PublicSidebar tree={tree} collapsedDefault={settings?.sidebar_collapsed_default ?? false} />
+      <PublicSidebar
+        tree={tree}
+        collapsedDefault={settings?.sidebar_collapsed_default ?? false}
+        logoLightUrl={settings?.logo_light_url ?? null}
+        logoDarkUrl={settings?.logo_dark_url ?? null}
+      />
       <main className="public-main">
         <GalleryZoomProvider>
           {children}

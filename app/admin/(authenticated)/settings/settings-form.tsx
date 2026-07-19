@@ -13,9 +13,13 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadingField, setUploadingField] = useState<"favicon_url" | "og_image_url" | null>(null);
+  const [uploadingField, setUploadingField] = useState<
+    "favicon_url" | "og_image_url" | "logo_light_url" | "logo_dark_url" | null
+  >(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const ogInputRef = useRef<HTMLInputElement>(null);
+  const logoLightInputRef = useRef<HTMLInputElement>(null);
+  const logoDarkInputRef = useRef<HTMLInputElement>(null);
 
   function set<K extends keyof Settings>(key: K, value: Settings[K]) {
     setSettings((s) => ({ ...s, [key]: value }));
@@ -32,6 +36,8 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
         copyright_text: settings.copyright_text,
         favicon_url: settings.favicon_url,
         og_image_url: settings.og_image_url,
+        logo_light_url: settings.logo_light_url,
+        logo_dark_url: settings.logo_dark_url,
         sidebar_collapsed_default: settings.sidebar_collapsed_default,
         cookie_notice_enabled: settings.cookie_notice_enabled,
       });
@@ -43,7 +49,10 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
     }
   }
 
-  async function handleImageUpload(field: "favicon_url" | "og_image_url", file: File) {
+  async function handleImageUpload(
+    field: "favicon_url" | "og_image_url" | "logo_light_url" | "logo_dark_url",
+    file: File
+  ) {
     setUploadingField(field);
     setError(null);
     try {
@@ -98,6 +107,27 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
             style={inputStyle}
             value={settings.copyright_text ?? ""}
             onChange={(e) => set("copyright_text", e.target.value)}
+          />
+        </Field>
+      </Section>
+
+      <Section title="Логотип">
+        <Field label="Логотип для світлої теми">
+          <ImagePicker
+            url={settings.logo_light_url}
+            uploading={uploadingField === "logo_light_url"}
+            inputRef={logoLightInputRef}
+            onPick={(file) => handleImageUpload("logo_light_url", file)}
+            onClear={() => set("logo_light_url", null)}
+          />
+        </Field>
+        <Field label="Логотип для темної теми">
+          <ImagePicker
+            url={settings.logo_dark_url}
+            uploading={uploadingField === "logo_dark_url"}
+            inputRef={logoDarkInputRef}
+            onPick={(file) => handleImageUpload("logo_dark_url", file)}
+            onClear={() => set("logo_dark_url", null)}
           />
         </Field>
       </Section>

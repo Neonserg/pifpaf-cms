@@ -6,7 +6,9 @@ import { useEffect, useState } from "react";
 import type { PageNode } from "@/lib/public-pages";
 import { mediaPublicUrl } from "@/lib/media-url";
 
-const LOGO_URL = mediaPublicUrl("site-assets/logo.jpg");
+// Fallback for sites that haven't uploaded theme-specific logos yet in
+// /admin/settings — keeps the old single-file logo working either way.
+const FALLBACK_LOGO_URL = mediaPublicUrl("site-assets/logo.jpg");
 
 function nodeHref(node: PageNode): string | null {
   if (node.fullPath === "") return "/";
@@ -17,9 +19,13 @@ function nodeHref(node: PageNode): string | null {
 export default function PublicSidebar({
   tree,
   collapsedDefault,
+  logoLightUrl,
+  logoDarkUrl,
 }: {
   tree: PageNode[];
   collapsedDefault: boolean;
+  logoLightUrl: string | null;
+  logoDarkUrl: string | null;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(collapsedDefault);
@@ -129,7 +135,10 @@ export default function PublicSidebar({
           </button>
           <Link href="/" className="public-brand">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={LOGO_URL} alt="pifpaf" />
+            <img
+              src={(theme === "dark" ? logoDarkUrl : logoLightUrl) ?? FALLBACK_LOGO_URL}
+              alt="pifpaf"
+            />
           </Link>
           <div className="public-head-controls">
             <button
