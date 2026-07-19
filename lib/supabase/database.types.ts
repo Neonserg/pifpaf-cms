@@ -210,6 +210,8 @@ export type Database = {
           favicon_url: string | null
           home_page_id: string | null
           id: string
+          logo_dark_url: string | null
+          logo_light_url: string | null
           og_image_url: string | null
           sidebar_collapsed_default: boolean
           site_description: string | null
@@ -222,6 +224,8 @@ export type Database = {
           favicon_url?: string | null
           home_page_id?: string | null
           id?: string
+          logo_dark_url?: string | null
+          logo_light_url?: string | null
           og_image_url?: string | null
           sidebar_collapsed_default?: boolean
           site_description?: string | null
@@ -234,6 +238,8 @@ export type Database = {
           favicon_url?: string | null
           home_page_id?: string | null
           id?: string
+          logo_dark_url?: string | null
+          logo_light_url?: string | null
           og_image_url?: string | null
           sidebar_collapsed_default?: boolean
           site_description?: string | null

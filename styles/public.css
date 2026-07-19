@@ -626,7 +626,14 @@
   }
 
   .public-main {
-    padding: 72px 16px 48px;
+    /* 48px clears the fixed hamburger button (top:12px + 28px height + gap)
+       without leaving the large empty band the desktop-sized 72px left above
+       galleries on phones. */
+    padding: 48px 16px 48px;
+  }
+
+  .public-page-header {
+    margin-bottom: 12px;
   }
 
   .public-block-columns {
