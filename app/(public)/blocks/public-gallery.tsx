@@ -5,23 +5,38 @@ import type { Tables } from "@/lib/supabase/database.types";
 import type { GalleryData } from "@/app/admin/(authenticated)/pages/block-actions";
 import { mediaPublicUrl, mediaThumbUrl } from "@/lib/media-url";
 import { computeJustified } from "@/lib/gallery-layout";
+import { THUMB_GENERATION_STEP, zoomScale } from "@/lib/gallery-zoom";
+import { useGalleryZoom } from "../gallery-zoom-context";
 import Lightbox from "./lightbox";
 
 type Media = Tables<"media">;
 
+// Base (zoom step 0) on-screen sizes. The live zoom control scales these for
+// display — see `useGalleryZoom()` below — without changing what's fetched.
 const TILE_ROW_HEIGHT = 260;
 const HORIZONTAL_HEIGHT = 260;
 
 // Requested thumbnail width per layout (~2x the on-screen display size for
-// retina). Fixed per layout — not per item — so Supabase caches a small,
-// predictable set of transform variants. Full resolution is served only in the
-// lightbox. Effective only when NEXT_PUBLIC_IMAGE_TRANSFORM=on; otherwise
-// mediaThumbUrl falls back to the original.
-const THUMB_WIDTH: Record<GalleryData["layout"], number> = {
+// retina). Fixed per layout — not per item, and not per zoom level — so
+// Supabase caches one predictable transform variant per layout regardless of
+// how far the user zooms in or out; zooming is a pure CSS resize of whatever
+// is already loaded. It's generated large enough to cover
+// THUMB_GENERATION_STEP steps of zoom without upscaling; beyond that it
+// upscales slightly, which is the intentional tradeoff for not fetching a new
+// image per zoom level. Full resolution is served only in the lightbox.
+// Effective only when NEXT_PUBLIC_IMAGE_TRANSFORM=on; otherwise mediaThumbUrl
+// falls back to the original.
+const BASE_THUMB_WIDTH: Record<GalleryData["layout"], number> = {
   tile: 700, // rows ~260px tall, width varies with aspect
   vertical: 1400, // full content-column width
   horizontal: 600, // ~260px-tall row in a horizontal scroller
 };
+const THUMB_WIDTH: Record<GalleryData["layout"], number> = Object.fromEntries(
+  (Object.entries(BASE_THUMB_WIDTH) as [GalleryData["layout"], number][]).map(([layout, width]) => [
+    layout,
+    Math.round(width * zoomScale(THUMB_GENERATION_STEP)),
+  ])
+) as Record<GalleryData["layout"], number>;
 
 export default function PublicGallery({
   layout,
@@ -35,6 +50,8 @@ export default function PublicGallery({
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(960);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const { step: zoomStep } = useGalleryZoom();
+  const scale = zoomScale(zoomStep);
 
   // useLayoutEffect: measure before paint so the justified layout doesn't
   // flash at the SSR-assumed 960px width and then visibly reflow.
@@ -49,16 +66,27 @@ export default function PublicGallery({
   }, [layout]);
 
   const justified = useMemo(
-    () => (layout === "tile" ? computeJustified(items, containerWidth, TILE_ROW_HEIGHT) : null),
-    [layout, items, containerWidth]
+    () => (layout === "tile" ? computeJustified(items, containerWidth, TILE_ROW_HEIGHT * scale) : null),
+    [layout, items, containerWidth, scale]
   );
+
+  // A vertical gallery is already a single full-width column, so zooming past
+  // 100% has nothing to grow into — only zooming out (narrowing, centered)
+  // has a visible effect.
+  const verticalWidthPct = Math.min(100, 100 * scale);
 
   return (
     <>
       <div
         ref={containerRef}
         className={`public-gallery public-gallery-${layout}`}
-        style={layout === "tile" ? { position: "relative", height: justified?.totalHeight ?? 0 } : undefined}
+        style={
+          layout === "tile"
+            ? { position: "relative", height: justified?.totalHeight ?? 0 }
+            : layout === "vertical"
+              ? { width: `${verticalWidthPct}%`, margin: "0 auto" }
+              : undefined
+        }
       >
         {layout === "tile"
           ? justified?.positions.map(({ item, left, top, width, height }, i) => (
@@ -77,7 +105,7 @@ export default function PublicGallery({
                 item={item}
                 caption={captions[item.id]}
                 thumbWidth={THUMB_WIDTH[layout]}
-                style={layout === "horizontal" ? { height: HORIZONTAL_HEIGHT, flex: "none" } : { width: "100%" }}
+                style={layout === "horizontal" ? { height: HORIZONTAL_HEIGHT * scale, flex: "none" } : { width: "100%" }}
                 onClick={() => setLightboxIndex(i)}
               />
             ))}

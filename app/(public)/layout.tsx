@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getPublicSiteData } from "@/lib/public-pages";
 import PublicSidebar from "./public-sidebar";
 import CookieNotice from "./cookie-notice";
+import { GalleryZoomProvider } from "./gallery-zoom-context";
 import "@/styles/public.css";
 
 // Keep in sync with the page-level revalidate in [[...slug]]/page.tsx.
@@ -24,8 +25,10 @@ export default async function PublicLayout({ children }: { children: React.React
     <div className="public-shell">
       <PublicSidebar tree={tree} collapsedDefault={settings?.sidebar_collapsed_default ?? false} />
       <main className="public-main">
-        {children}
-        {settings?.copyright_text && <footer className="public-footer">{settings.copyright_text}</footer>}
+        <GalleryZoomProvider>
+          {children}
+          {settings?.copyright_text && <footer className="public-footer">{settings.copyright_text}</footer>}
+        </GalleryZoomProvider>
       </main>
       {settings?.cookie_notice_enabled && <CookieNotice />}
     </div>

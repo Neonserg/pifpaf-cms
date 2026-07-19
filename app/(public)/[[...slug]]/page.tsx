@@ -5,6 +5,7 @@ import { createPublicSupabaseClient } from "@/lib/supabase/public";
 import PublicBlocks from "../blocks/public-blocks";
 import PublicForm from "../forms/public-form";
 import CategoryIndex from "../blocks/category-index";
+import GalleryZoomControl from "../gallery-zoom-control";
 
 // ISR: public pages are cached and re-rendered at most every 5 minutes; admin
 // actions additionally revalidate the whole public layout on every publish, so
@@ -53,7 +54,9 @@ export default async function PublicPage({ params }: { params: Params }) {
 
     return (
       <article className="public-page">
-        <h1 className="public-page-title">{page.title}</h1>
+        <div className="public-page-header">
+          <h1 className="public-page-title">{page.title}</h1>
+        </div>
         <CategoryIndex pages={children ?? []} basePath={slug!.join("/")} />
       </article>
     );
@@ -63,7 +66,10 @@ export default async function PublicPage({ params }: { params: Params }) {
 
   return (
     <article className="public-page">
-      {!page.is_home && <h1 className="public-page-title">{page.title}</h1>}
+      <div className="public-page-header">
+        {!page.is_home && <h1 className="public-page-title">{page.title}</h1>}
+        <GalleryZoomControl />
+      </div>
       <PublicBlocks pageId={page.id} />
       {form && <PublicForm form={form} />}
     </article>
