@@ -2,8 +2,11 @@
 
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { forms } from "@/lib/db/schema";
+import type { FormField } from "@/app/admin/(authenticated)/forms/actions";
+import { sendFormSubmissionEmail } from "@/lib/email/notify";
 
 // Basic abuse limits for an unauthenticated, public insert. Backed by the
 // `submit_form` Postgres function, which verifies the form exists and
@@ -59,5 +62,16 @@ export async function submitForm(
     // Don't leak raw database errors to anonymous visitors.
     console.error("submitForm failed:", message);
     throw new Error("Не вдалося надіслати форму");
+  }
+
+  // Best-effort notification — the submission is already saved above, so an
+  // email hiccup here must not surface as a failed submission to the visitor.
+  try {
+    const [form] = await db.select().from(forms).where(eq(forms.id, formId)).limit(1);
+    if (form) {
+      await sendFormSubmissionEmail(form.title, (form.fields as unknown as FormField[]) ?? [], data);
+    }
+  } catch (err) {
+    console.error("sendFormSubmissionEmail failed:", err instanceof Error ? err.message : err);
   }
 }
