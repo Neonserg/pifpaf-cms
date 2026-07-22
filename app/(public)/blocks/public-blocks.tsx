@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { blocks as blocksTable, media as mediaTable } from "@/lib/db/schema";
@@ -112,15 +113,14 @@ function PublicBlock({ block, mediaById }: { block: Block; mediaById: Map<string
             height={item.height ?? undefined}
           />
         ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={mediaThumbUrl(item.storage_path, THUMB_WIDTH[data.width])}
             alt=""
             loading="lazy"
-            decoding="async"
             style={{ ...style, display: "block" }}
-            width={item.width ?? undefined}
-            height={item.height ?? undefined}
+            width={item.width ?? THUMB_WIDTH[data.width]}
+            height={item.height ?? Math.round(THUMB_WIDTH[data.width] * 0.75)}
+            sizes="(max-width: 700px) 100vw, 700px"
           />
         )}
       </div>

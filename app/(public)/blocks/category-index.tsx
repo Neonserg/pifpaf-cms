@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { blocks as blocksTable, media as mediaTable } from "@/lib/db/schema";
@@ -25,10 +26,10 @@ export default async function CategoryIndex({ pages, basePath }: { pages: Page[]
   }
 
   const thumbIds = [...firstMediaIdByPage.values()];
-  const thumbById = new Map<string, { storage_path: string }>();
+  const thumbById = new Map<string, { storage_path: string; width: number | null; height: number | null }>();
   if (thumbIds.length > 0) {
     const mediaRows = await db
-      .select({ id: mediaTable.id, storage_path: mediaTable.storage_path })
+      .select({ id: mediaTable.id, storage_path: mediaTable.storage_path, width: mediaTable.width, height: mediaTable.height })
       .from(mediaTable)
       .where(inArray(mediaTable.id, thumbIds));
     for (const row of mediaRows) thumbById.set(row.id, row);
@@ -43,8 +44,14 @@ export default async function CategoryIndex({ pages, basePath }: { pages: Page[]
           <li key={page.id}>
             <Link href={`/${basePath}/${page.slug}`} className="public-category-thumb">
               {thumb && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={mediaThumbUrl(thumb.storage_path, 500)} alt="" loading="lazy" decoding="async" />
+                <Image
+                  src={mediaThumbUrl(thumb.storage_path, 500)}
+                  alt=""
+                  width={thumb.width ?? 500}
+                  height={thumb.height ?? 375}
+                  sizes="(max-width: 640px) 50vw, 300px"
+                  loading="lazy"
+                />
               )}
               <span>{page.title}</span>
             </Link>

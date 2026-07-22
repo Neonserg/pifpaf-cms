@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "pub-9e306cc4beb44cb8a34af75815e09b58.r2.dev" },
+      // Legacy: settings.logo_light_url/logo_dark_url/favicon_url/og_image_url
+      // still hold absolute Supabase URLs from before the Neon/R2 migration.
+      { protocol: "https", hostname: "uncpsomdrijhosgrdgwr.supabase.co" },
+    ],
+  },
   async headers() {
     return [
       {
