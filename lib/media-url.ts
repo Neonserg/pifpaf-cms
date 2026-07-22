@@ -1,7 +1,9 @@
 // Pure string construction (no storage client needed — the public URL format
 // is deterministic), so this is safe to call from both server and client code.
 
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
+// Read from a client component (e.g. the lightbox), so this must be
+// NEXT_PUBLIC_-prefixed — plain env vars are stripped from the browser bundle.
+const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
 export function mediaPublicUrl(storagePath: string) {
   return `${R2_PUBLIC_URL}/${storagePath}`;
