@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import type { MediaRow } from "@/lib/db/schema";
 import type { GalleryData } from "@/app/admin/(authenticated)/pages/block-actions";
 import { mediaPublicUrl, mediaThumbUrl } from "@/lib/media-url";
@@ -138,8 +139,14 @@ function GalleryItem({
           <span className="public-gallery-play" aria-hidden="true" />
         </>
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={mediaThumbUrl(item.storage_path, thumbWidth)} alt={caption ?? ""} loading="lazy" decoding="async" />
+        <Image
+          src={mediaThumbUrl(item.storage_path, thumbWidth)}
+          alt={caption ?? ""}
+          width={item.width ?? thumbWidth}
+          height={item.height ?? Math.round(thumbWidth * 0.75)}
+          sizes="(max-width: 700px) 50vw, 320px"
+          loading="lazy"
+        />
       )}
       {caption && <span className="public-gallery-caption">{caption}</span>}
     </button>

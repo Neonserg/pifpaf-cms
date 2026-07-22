@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import NextImage from "next/image";
 import type { MediaRow } from "@/lib/db/schema";
 import { mediaPublicUrl } from "@/lib/media-url";
 
@@ -79,8 +80,14 @@ export default function Lightbox({
         {item.type === "video" ? (
           <video src={mediaPublicUrl(item.storage_path)} controls autoPlay />
         ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={mediaPublicUrl(item.storage_path)} alt={caption ?? ""} />
+          <NextImage
+            src={mediaPublicUrl(item.storage_path)}
+            alt={caption ?? ""}
+            width={item.width ?? 1600}
+            height={item.height ?? 1200}
+            sizes="90vw"
+            priority
+          />
         )}
         {caption && <div className="lightbox-caption">{caption}</div>}
       </div>
