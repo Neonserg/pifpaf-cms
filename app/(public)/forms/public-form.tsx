@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { FormRow as FormRowType } from "@/lib/db/schema";
 import type { FormField } from "@/app/admin/(authenticated)/forms/actions";
 import { submitForm } from "./actions";
 
-type FormRow = Tables<"forms">;
+type FormRow = FormRowType;
 
 export default function PublicForm({ form }: { form: FormRow }) {
   const fields = (form.fields as unknown as FormField[]) ?? [];

@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { uploadToR2 } from "@/lib/storage/upload-client";
 import { mediaPublicUrl } from "@/lib/media-url";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { MediaRow } from "@/lib/db/schema";
 import { deleteMedia, recordUploadedMedia } from "./actions";
 
-type Media = Tables<"media">;
+type Media = MediaRow;
 
 // Per-type upload limits. The storage bucket enforces a hard 100 MB /
 // image+video-only cap server-side; the tighter 10 MB photo limit lives here.
@@ -74,17 +74,16 @@ export default function MediaLibrary({ initialMedia }: { initialMedia: Media[] }
     if (files.length === 0) return;
     setUploading((u) => [...u, ...files.map((f) => f.name)]);
 
-    const supabase = createBrowserSupabaseClient();
-
     for (const file of files) {
       const dims = await readDimensions(file);
       const type: "photo" | "video" = file.type.startsWith("video") ? "video" : "photo";
-      const path = `${crypto.randomUUID()}-${file.name}`;
 
-      const { error: storageError } = await supabase.storage.from("media").upload(path, file);
-      if (storageError) {
+      let path: string;
+      try {
+        path = await uploadToR2(file);
+      } catch (e) {
         setUploading((u) => u.filter((n) => n !== file.name));
-        setUploadError(`Не вдалося завантажити ${file.name}: ${storageError.message}`);
+        setUploadError(`Не вдалося завантажити ${file.name}: ${e instanceof Error ? e.message : "помилка"}`);
         continue;
       }
 

@@ -1,16 +1,9 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { desc } from "drizzle-orm";
+import { db } from "@/lib/db/client";
+import { media } from "@/lib/db/schema";
 import MediaLibrary from "./media-library";
 
 export default async function MediaAdminPage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: media, error } = await supabase
-    .from("media")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return <div style={{ padding: 24, color: "var(--rec)" }}>Помилка: {error.message}</div>;
-  }
-
-  return <MediaLibrary initialMedia={media ?? []} />;
+  const mediaRows = await db.select().from(media).orderBy(desc(media.created_at));
+  return <MediaLibrary initialMedia={mediaRows} />;
 }

@@ -1,7 +1,9 @@
-import { createPublicSupabaseClient } from "@/lib/supabase/public";
+import { asc, eq, inArray } from "drizzle-orm";
+import { db } from "@/lib/db/client";
+import { blocks as blocksTable, media as mediaTable } from "@/lib/db/schema";
 import { mediaPublicUrl, mediaThumbUrl } from "@/lib/media-url";
 import { sanitizeHtml } from "@/lib/sanitize-html";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { BlockRow, MediaRow } from "@/lib/db/schema";
 import type {
   TextData,
   ColumnsData,
@@ -10,8 +12,8 @@ import type {
 } from "@/app/admin/(authenticated)/pages/block-actions";
 import PublicGallery from "./public-gallery";
 
-type Block = Tables<"blocks">;
-type Media = Tables<"media">;
+type Block = BlockRow;
+type Media = MediaRow;
 
 const WIDTH_PCT: Record<MediaBlockData["width"], number | null> = {
   original: null,
@@ -37,14 +39,13 @@ const JUSTIFY: Record<MediaBlockData["align"], string> = {
 };
 
 export default async function PublicBlocks({ pageId }: { pageId: string }) {
-  const supabase = createPublicSupabaseClient();
-  const { data: blocks } = await supabase
-    .from("blocks")
-    .select("*")
-    .eq("page_id", pageId)
-    .order("sort_order", { ascending: true });
+  const blocks = await db
+    .select()
+    .from(blocksTable)
+    .where(eq(blocksTable.page_id, pageId))
+    .orderBy(asc(blocksTable.sort_order));
 
-  if (!blocks || blocks.length === 0) return null;
+  if (blocks.length === 0) return null;
 
   const mediaIds = new Set<string>();
   for (const block of blocks) {
@@ -58,8 +59,8 @@ export default async function PublicBlocks({ pageId }: { pageId: string }) {
 
   const mediaById = new Map<string, Media>();
   if (mediaIds.size > 0) {
-    const { data: mediaRows } = await supabase.from("media").select("*").in("id", [...mediaIds]);
-    for (const row of mediaRows ?? []) mediaById.set(row.id, row);
+    const mediaRows = await db.select().from(mediaTable).where(inArray(mediaTable.id, [...mediaIds]));
+    for (const row of mediaRows) mediaById.set(row.id, row);
   }
 
   return (

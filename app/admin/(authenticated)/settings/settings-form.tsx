@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { uploadToR2 } from "@/lib/storage/upload-client";
 import { mediaPublicUrl } from "@/lib/media-url";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { SettingsRow } from "@/lib/db/schema";
 import { updateSettings } from "./actions";
 
-type Settings = Tables<"settings">;
+type Settings = SettingsRow;
 
 export default function SettingsForm({ initialSettings }: { initialSettings: Settings }) {
   const [settings, setSettings] = useState(initialSettings);
@@ -56,10 +56,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
     setUploadingField(field);
     setError(null);
     try {
-      const supabase = createBrowserSupabaseClient();
-      const path = `${crypto.randomUUID()}-${file.name}`;
-      const { error: storageError } = await supabase.storage.from("media").upload(path, file);
-      if (storageError) throw new Error(storageError.message);
+      const path = await uploadToR2(file);
       set(field, mediaPublicUrl(path));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не вдалося завантажити файл");

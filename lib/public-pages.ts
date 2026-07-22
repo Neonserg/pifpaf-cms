@@ -1,9 +1,11 @@
 import { cache } from "react";
-import { createPublicSupabaseClient } from "@/lib/supabase/public";
-import type { Tables } from "@/lib/supabase/database.types";
+import { asc } from "drizzle-orm";
+import { db } from "@/lib/db/client";
+import { pages, settings } from "@/lib/db/schema";
+import type { PageRow, SettingsRow } from "@/lib/db/schema";
 
-export type Page = Tables<"pages">;
-export type SiteSettings = Tables<"settings">;
+export type Page = PageRow;
+export type SiteSettings = SettingsRow;
 
 export type PageNode = Page & { children: PageNode[]; fullPath: string | null };
 
@@ -28,13 +30,11 @@ function computeFullPath(page: Page, byId: Map<string, Page>): string | null {
 }
 
 export const getPublicSiteData = cache(async (): Promise<PublicSiteData> => {
-  const supabase = createPublicSupabaseClient();
-  const [{ data: pages }, { data: settings }] = await Promise.all([
-    supabase.from("pages").select("*").order("sort_order", { ascending: true }),
-    supabase.from("settings").select("*").single(),
+  const [allPages, settingsRows] = await Promise.all([
+    db.select().from(pages).orderBy(asc(pages.sort_order)),
+    db.select().from(settings).limit(1),
   ]);
 
-  const allPages = pages ?? [];
   const byId = new Map(allPages.map((p) => [p.id, p]));
   const pathMap = new Map<string, Page>();
   let homePage: Page | null = null;
@@ -66,7 +66,7 @@ export const getPublicSiteData = cache(async (): Promise<PublicSiteData> => {
     }));
   }
 
-  return { settings: settings ?? null, tree: buildNodes(null), pathMap, homePage };
+  return { settings: settingsRows[0] ?? null, tree: buildNodes(null), pathMap, homePage };
 });
 
 export function resolvePagePath(slug: string[] | undefined, data: PublicSiteData): Page | null {

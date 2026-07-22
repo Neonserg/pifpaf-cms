@@ -1,8 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdminClient } from "@/lib/supabase/guard";
-import type { Json } from "@/lib/supabase/database.types";
+import { asc, eq } from "drizzle-orm";
+import { requireAdmin } from "@/lib/auth/guard";
+import { db } from "@/lib/db/client";
+import { blocks } from "@/lib/db/schema";
+import type { Json } from "@/lib/db/schema";
 
 export type BlockType = "text" | "columns" | "gallery" | "media";
 
@@ -19,31 +22,27 @@ function defaultData(type: BlockType): Json {
 }
 
 async function reindex(pageId: string, orderedIds: string[]) {
-  const supabase = await requireAdminClient();
-  await Promise.all(
-    orderedIds.map((id, i) => supabase.from("blocks").update({ sort_order: i }).eq("id", id))
-  );
+  await requireAdmin();
+  await Promise.all(orderedIds.map((id, i) => db.update(blocks).set({ sort_order: i }).where(eq(blocks.id, id))));
   revalidatePath("/admin/pages");
   revalidatePath("/", "layout");
 }
 
 export async function createBlock(pageId: string, type: BlockType, afterBlockId: string | null) {
-  const supabase = await requireAdminClient();
+  await requireAdmin();
 
-  const { data: existing } = await supabase
-    .from("blocks")
-    .select("id")
-    .eq("page_id", pageId)
-    .order("sort_order", { ascending: true });
+  const existing = await db
+    .select({ id: blocks.id })
+    .from(blocks)
+    .where(eq(blocks.page_id, pageId))
+    .orderBy(asc(blocks.sort_order));
 
-  const ids = (existing ?? []).map((b) => b.id);
+  const ids = existing.map((b) => b.id);
 
-  const { data: created, error } = await supabase
-    .from("blocks")
-    .insert({ page_id: pageId, type, data: defaultData(type), sort_order: ids.length })
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
+  const [created] = await db
+    .insert(blocks)
+    .values({ page_id: pageId, type, data: defaultData(type), sort_order: ids.length })
+    .returning();
 
   const insertAt = afterBlockId ? ids.indexOf(afterBlockId) + 1 : 0;
   ids.splice(insertAt, 0, created.id);
@@ -53,43 +52,40 @@ export async function createBlock(pageId: string, type: BlockType, afterBlockId:
 }
 
 export async function updateBlockData(blockId: string, data: Json) {
-  const supabase = await requireAdminClient();
-  const { error } = await supabase.from("blocks").update({ data }).eq("id", blockId);
-  if (error) throw new Error(error.message);
+  await requireAdmin();
+  await db.update(blocks).set({ data }).where(eq(blocks.id, blockId));
   revalidatePath("/admin/pages");
   revalidatePath("/", "layout");
 }
 
 export async function deleteBlock(pageId: string, blockId: string) {
-  const supabase = await requireAdminClient();
-  const { error } = await supabase.from("blocks").delete().eq("id", blockId);
-  if (error) throw new Error(error.message);
+  await requireAdmin();
+  await db.delete(blocks).where(eq(blocks.id, blockId));
   revalidatePath("/admin/pages");
   revalidatePath("/", "layout");
 }
 
 export async function duplicateBlock(pageId: string, blockId: string) {
-  const supabase = await requireAdminClient();
-  const { data: original, error: fetchError } = await supabase
-    .from("blocks")
-    .select("type, data")
-    .eq("id", blockId)
-    .single();
-  if (fetchError) throw new Error(fetchError.message);
+  await requireAdmin();
 
-  const { data: existing } = await supabase
-    .from("blocks")
-    .select("id")
-    .eq("page_id", pageId)
-    .order("sort_order", { ascending: true });
-  const ids = (existing ?? []).map((b) => b.id);
+  const [original] = await db
+    .select({ type: blocks.type, data: blocks.data })
+    .from(blocks)
+    .where(eq(blocks.id, blockId))
+    .limit(1);
+  if (!original) throw new Error("Block not found");
 
-  const { data: created, error } = await supabase
-    .from("blocks")
-    .insert({ page_id: pageId, type: original.type, data: original.data, sort_order: ids.length })
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
+  const existing = await db
+    .select({ id: blocks.id })
+    .from(blocks)
+    .where(eq(blocks.page_id, pageId))
+    .orderBy(asc(blocks.sort_order));
+  const ids = existing.map((b) => b.id);
+
+  const [created] = await db
+    .insert(blocks)
+    .values({ page_id: pageId, type: original.type, data: original.data, sort_order: ids.length })
+    .returning();
 
   const insertAt = ids.indexOf(blockId) + 1;
   ids.splice(insertAt, 0, created.id);

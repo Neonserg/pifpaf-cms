@@ -2,13 +2,13 @@
 
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
-import { createPublicSupabaseClient } from "@/lib/supabase/public";
-import type { Json } from "@/lib/supabase/database.types";
+import { sql } from "drizzle-orm";
+import { db } from "@/lib/db/client";
 
 // Basic abuse limits for an unauthenticated, public insert. Backed by the
-// `submit_form` Postgres function (SECURITY DEFINER), which verifies the form
-// exists and enforces a per-IP rate limit (5 submissions / 10 minutes) — direct
-// INSERT into form_submissions is no longer allowed for anon.
+// `submit_form` Postgres function, which verifies the form exists and
+// enforces a per-IP rate limit (5 submissions / 10 minutes) — direct
+// INSERT into form_submissions bypasses that check, so always go through it.
 const MAX_FIELDS = 50;
 const MAX_VALUE_LENGTH = 5000;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -47,19 +47,17 @@ export async function submitForm(
     }
   }
 
-  const supabase = createPublicSupabaseClient();
-  const { error } = await supabase.rpc("submit_form", {
-    p_form_id: formId,
-    p_data: data as unknown as Json,
-    p_ip_hash: await clientIpHash(),
-  });
-
-  if (error) {
-    if (error.message.includes("rate_limited")) {
+  try {
+    await db.execute(
+      sql`select public.submit_form(${formId}::uuid, ${JSON.stringify(data)}::jsonb, ${await clientIpHash()})`
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("rate_limited")) {
       throw new Error("Забагато заявок поспіль. Спробуйте, будь ласка, пізніше.");
     }
     // Don't leak raw database errors to anonymous visitors.
-    console.error("submitForm failed:", error.message);
+    console.error("submitForm failed:", message);
     throw new Error("Не вдалося надіслати форму");
   }
 }
