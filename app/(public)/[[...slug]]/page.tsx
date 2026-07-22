@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { and, asc, eq } from "drizzle-orm";
 import { getPublicSiteData, resolvePagePath } from "@/lib/public-pages";
-import { createPublicSupabaseClient } from "@/lib/supabase/public";
+import { db } from "@/lib/db/client";
+import { pages, forms } from "@/lib/db/schema";
 import PublicBlocks from "../blocks/public-blocks";
 import PublicForm from "../forms/public-form";
 import CategoryIndex from "../blocks/category-index";
@@ -42,27 +44,24 @@ export default async function PublicPage({ params }: { params: Params }) {
     notFound();
   }
 
-  const supabase = createPublicSupabaseClient();
-
   if (page.type === "category") {
-    const { data: children } = await supabase
-      .from("pages")
-      .select("*")
-      .eq("parent_id", page.id)
-      .eq("type", "content")
-      .order("sort_order", { ascending: true });
+    const children = await db
+      .select()
+      .from(pages)
+      .where(and(eq(pages.parent_id, page.id), eq(pages.type, "content")))
+      .orderBy(asc(pages.sort_order));
 
     return (
       <article className="public-page">
         <div className="public-page-header">
           <h1 className="public-page-title">{page.title}</h1>
         </div>
-        <CategoryIndex pages={children ?? []} basePath={slug!.join("/")} />
+        <CategoryIndex pages={children} basePath={slug!.join("/")} />
       </article>
     );
   }
 
-  const { data: form } = await supabase.from("forms").select("*").eq("page_id", page.id).maybeSingle();
+  const [form] = await db.select().from(forms).where(eq(forms.page_id, page.id)).limit(1);
 
   return (
     <article className="public-page">

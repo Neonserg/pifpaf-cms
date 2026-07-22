@@ -1,59 +1,56 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdminClient } from "@/lib/supabase/guard";
-import type { Json } from "@/lib/supabase/database.types";
+import { eq } from "drizzle-orm";
+import { requireAdmin } from "@/lib/auth/guard";
+import { db } from "@/lib/db/client";
+import { forms, form_submissions } from "@/lib/db/schema";
+import type { Json } from "@/lib/db/schema";
 
 export type FieldType = "text" | "email" | "tel" | "textarea" | "checkbox";
 export type FormField = { id: string; type: FieldType; label: string; required: boolean };
 
 export async function createForm(title: string) {
-  const supabase = await requireAdminClient();
-  const { data, error } = await supabase
-    .from("forms")
-    .insert({ title, fields: [] as unknown as Json, page_id: null })
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
+  await requireAdmin();
+  const [created] = await db
+    .insert(forms)
+    .values({ title, fields: [] as unknown as Json, page_id: null })
+    .returning();
   revalidatePath("/admin/forms");
   revalidatePath("/", "layout");
-  return data;
+  return created;
 }
 
 export async function updateForm(
   id: string,
   fields: { title?: string; page_id?: string | null; fields?: FormField[] }
 ) {
-  const supabase = await requireAdminClient();
+  await requireAdmin();
   const payload: { title?: string; page_id?: string | null; fields?: Json } = {
     ...(fields.title !== undefined ? { title: fields.title } : {}),
     ...(fields.page_id !== undefined ? { page_id: fields.page_id } : {}),
     ...(fields.fields !== undefined ? { fields: fields.fields as unknown as Json } : {}),
   };
-  const { error } = await supabase.from("forms").update(payload).eq("id", id);
-  if (error) throw new Error(error.message);
+  await db.update(forms).set(payload).where(eq(forms.id, id));
   revalidatePath("/admin/forms");
   revalidatePath("/", "layout");
 }
 
 export async function deleteForm(id: string) {
-  const supabase = await requireAdminClient();
-  const { error } = await supabase.from("forms").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  await requireAdmin();
+  await db.delete(forms).where(eq(forms.id, id));
   revalidatePath("/admin/forms");
   revalidatePath("/", "layout");
 }
 
 export async function markSubmissionRead(id: string, isRead: boolean) {
-  const supabase = await requireAdminClient();
-  const { error } = await supabase.from("form_submissions").update({ is_read: isRead }).eq("id", id);
-  if (error) throw new Error(error.message);
+  await requireAdmin();
+  await db.update(form_submissions).set({ is_read: isRead }).where(eq(form_submissions.id, id));
   revalidatePath("/admin/forms");
 }
 
 export async function deleteSubmission(id: string) {
-  const supabase = await requireAdminClient();
-  const { error } = await supabase.from("form_submissions").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  await requireAdmin();
+  await db.delete(form_submissions).where(eq(form_submissions.id, id));
   revalidatePath("/admin/forms");
 }

@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdminClient } from "@/lib/supabase/guard";
-import type { TablesUpdate } from "@/lib/supabase/database.types";
+import { requireAdmin } from "@/lib/auth/guard";
+import { db } from "@/lib/db/client";
+import { settings } from "@/lib/db/schema";
 
-export async function updateSettings(fields: TablesUpdate<"settings">) {
-  const supabase = await requireAdminClient();
-  const { error } = await supabase.from("settings").update(fields).not("id", "is", null);
-  if (error) throw new Error(error.message);
+export async function updateSettings(fields: Partial<typeof settings.$inferInsert>) {
+  await requireAdmin();
+  await db.update(settings).set(fields);
   revalidatePath("/admin/settings");
   revalidatePath("/", "layout");
 }

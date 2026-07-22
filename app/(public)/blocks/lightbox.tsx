@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { MediaRow } from "@/lib/db/schema";
 import { mediaPublicUrl } from "@/lib/media-url";
 
-type Media = Tables<"media">;
+type Media = MediaRow;
 
 export default function Lightbox({
   items,

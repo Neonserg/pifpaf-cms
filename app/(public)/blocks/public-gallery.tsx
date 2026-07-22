@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { MediaRow } from "@/lib/db/schema";
 import type { GalleryData } from "@/app/admin/(authenticated)/pages/block-actions";
 import { mediaPublicUrl, mediaThumbUrl } from "@/lib/media-url";
 import { computeJustified } from "@/lib/gallery-layout";
@@ -9,7 +9,7 @@ import { THUMB_GENERATION_STEP, zoomScale } from "@/lib/gallery-zoom";
 import { useGalleryZoom } from "../gallery-zoom-context";
 import Lightbox from "./lightbox";
 
-type Media = Tables<"media">;
+type Media = MediaRow;
 
 // Base (zoom step 0) on-screen sizes. The live zoom control scales these for
 // display — see `useGalleryZoom()` below — without changing what's fetched.

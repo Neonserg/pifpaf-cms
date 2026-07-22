@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { uploadToR2 } from "@/lib/storage/upload-client";
 import { mediaPublicUrl } from "@/lib/media-url";
-import type { Json, Tables } from "@/lib/supabase/database.types";
+import type { Json, BlockRow, MediaRow } from "@/lib/db/schema";
 import {
   createBlock,
   deleteBlock,
@@ -19,8 +19,8 @@ import {
 import { recordUploadedMedia } from "../media/actions";
 import { computeJustified } from "@/lib/gallery-layout";
 
-type Block = Tables<"blocks">;
-type Media = Tables<"media">;
+type Block = BlockRow;
+type Media = MediaRow;
 
 const BLOCK_LABEL: Record<BlockType, string> = {
   text: "Текстовий блок",
@@ -55,15 +55,15 @@ function readDimensions(file: File): Promise<{ width: number; height: number }> 
 }
 
 async function uploadFiles(files: File[], onCreated: (row: Media) => void): Promise<Media[]> {
-  const supabase = createBrowserSupabaseClient();
   const created: Media[] = [];
   for (const file of files) {
     const dims = await readDimensions(file);
     const type: "photo" | "video" = file.type.startsWith("video") ? "video" : "photo";
-    const path = `${crypto.randomUUID()}-${file.name}`;
-    const { error } = await supabase.storage.from("media").upload(path, file);
-    if (error) {
-      alert(`Не вдалося завантажити ${file.name}: ${error.message}`);
+    let path: string;
+    try {
+      path = await uploadToR2(file);
+    } catch (e) {
+      alert(`Не вдалося завантажити ${file.name}: ${e instanceof Error ? e.message : "помилка"}`);
       continue;
     }
     const row = (await recordUploadedMedia({

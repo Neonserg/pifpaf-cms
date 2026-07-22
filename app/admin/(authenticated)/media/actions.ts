@@ -1,8 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdminClient } from "@/lib/supabase/guard";
-import type { TablesInsert } from "@/lib/supabase/database.types";
+import { eq } from "drizzle-orm";
+import { requireAdmin } from "@/lib/auth/guard";
+import { db } from "@/lib/db/client";
+import { media } from "@/lib/db/schema";
+import type { MediaInsert } from "@/lib/db/schema";
+import { deleteObject } from "@/lib/storage/r2";
 
 export async function recordUploadedMedia(input: {
   filename: string;
@@ -11,19 +15,17 @@ export async function recordUploadedMedia(input: {
   width: number;
   height: number;
 }) {
-  const supabase = await requireAdminClient();
-  const payload: TablesInsert<"media"> = input;
-  const { data, error } = await supabase.from("media").insert(payload).select().single();
-  if (error) throw new Error(error.message);
+  await requireAdmin();
+  const payload: MediaInsert = input;
+  const [created] = await db.insert(media).values(payload).returning();
   revalidatePath("/admin/media");
-  return data;
+  return created;
 }
 
 export async function deleteMedia(id: string, storagePath: string) {
-  const supabase = await requireAdminClient();
-  await supabase.storage.from("media").remove([storagePath]);
-  const { error } = await supabase.from("media").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  await requireAdmin();
+  await deleteObject(storagePath);
+  await db.delete(media).where(eq(media.id, id));
   revalidatePath("/admin/media");
   // Deleted media may be referenced by public gallery/media blocks.
   revalidatePath("/", "layout");

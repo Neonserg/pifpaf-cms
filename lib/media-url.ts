@@ -1,28 +1,21 @@
-// Pure string construction (no Supabase client needed — the public URL format
+// Pure string construction (no storage client needed — the public URL format
 // is deterministic), so this is safe to call from both server and client code.
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-// Supabase image transformations are opt-in: enabling them changes the live
-// site's image URLs, so we gate the resized variant behind an env flag. With
-// the flag off (default), thumbnails fall back to the original object URL and
-// nothing about production behavior changes.
-const IMAGE_TRANSFORM = process.env.NEXT_PUBLIC_IMAGE_TRANSFORM === "on";
+// Read from a client component (e.g. the lightbox), so this must be
+// NEXT_PUBLIC_-prefixed — plain env vars are stripped from the browser bundle.
+const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
 export function mediaPublicUrl(storagePath: string) {
-  return `${SUPABASE_URL}/storage/v1/object/public/media/${storagePath}`;
+  return `${R2_PUBLIC_URL}/${storagePath}`;
 }
 
 /**
- * Resized/optimized URL for grid thumbnails, so a photo portfolio isn't shipping
- * full-resolution originals into small tiles. Requires Supabase image
- * transformations (set NEXT_PUBLIC_IMAGE_TRANSFORM=on once confirmed available
- * on the project's plan); otherwise returns the original URL.
+ * R2 has no built-in image-resize endpoint (Supabase's Storage transform API
+ * doesn't have an R2 equivalent without paid Cloudflare Image Resizing on a
+ * custom domain), so thumbnails currently serve the original file. This
+ * matches current production behavior — NEXT_PUBLIC_IMAGE_TRANSFORM has been
+ * off there too — but is a known gap if the media library grows large.
  */
-export function mediaThumbUrl(storagePath: string, width: number) {
-  if (!IMAGE_TRANSFORM) return mediaPublicUrl(storagePath);
-  // resize=contain is required: with only `width`, Supabase keeps the original
-  // height and crops (cover) into a distorted vertical/horizontal slice.
-  // `contain` scales proportionally to the given width, preserving aspect ratio.
-  return `${SUPABASE_URL}/storage/v1/render/image/public/media/${storagePath}?width=${width}&resize=contain&quality=75`;
+export function mediaThumbUrl(storagePath: string, _width: number) {
+  return mediaPublicUrl(storagePath);
 }

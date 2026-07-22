@@ -1,23 +1,20 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { asc, desc, eq } from "drizzle-orm";
+import { db } from "@/lib/db/client";
+import { forms, pages, form_submissions } from "@/lib/db/schema";
 import FormsManager from "./forms-manager";
 
 export default async function FormsPage() {
-  const supabase = await createServerSupabaseClient();
-  const [{ data: forms, error: formsError }, { data: pages }, { data: submissions }] = await Promise.all([
-    supabase.from("forms").select("*").order("created_at", { ascending: true }),
-    supabase.from("pages").select("*").eq("type", "content").order("title", { ascending: true }),
-    supabase.from("form_submissions").select("*").order("created_at", { ascending: false }),
+  const [formsRows, pagesRows, submissionsRows] = await Promise.all([
+    db.select().from(forms).orderBy(asc(forms.created_at)),
+    db.select().from(pages).where(eq(pages.type, "content")).orderBy(asc(pages.title)),
+    db.select().from(form_submissions).orderBy(desc(form_submissions.created_at)),
   ]);
-
-  if (formsError) {
-    return <div style={{ padding: 24, color: "var(--rec)" }}>Помилка: {formsError.message}</div>;
-  }
 
   return (
     <FormsManager
-      initialForms={forms ?? []}
-      initialPages={pages ?? []}
-      initialSubmissions={submissions ?? []}
+      initialForms={formsRows}
+      initialPages={pagesRows}
+      initialSubmissions={submissionsRows}
     />
   );
 }

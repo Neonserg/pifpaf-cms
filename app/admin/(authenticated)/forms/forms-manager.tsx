@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { FormRow, PageRow, FormSubmissionRow } from "@/lib/db/schema";
 import {
   createForm,
   deleteForm,
@@ -13,9 +13,9 @@ import {
   type FormField,
 } from "./actions";
 
-type Form = Tables<"forms">;
-type Page = Tables<"pages">;
-type Submission = Tables<"form_submissions">;
+type Form = FormRow;
+type Page = PageRow;
+type Submission = FormSubmissionRow;
 
 const FIELD_TYPE_LABEL: Record<FieldType, string> = {
   text: "Текст",

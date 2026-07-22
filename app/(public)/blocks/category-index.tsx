@@ -1,27 +1,24 @@
 import Link from "next/link";
-import { createPublicSupabaseClient } from "@/lib/supabase/public";
+import { and, asc, eq, inArray } from "drizzle-orm";
+import { db } from "@/lib/db/client";
+import { blocks as blocksTable, media as mediaTable } from "@/lib/db/schema";
 import { mediaThumbUrl } from "@/lib/media-url";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { PageRow } from "@/lib/db/schema";
 import type { GalleryData } from "@/app/admin/(authenticated)/pages/block-actions";
 
-type Page = Tables<"pages">;
+type Page = PageRow;
 
 export default async function CategoryIndex({ pages, basePath }: { pages: Page[]; basePath: string }) {
   if (pages.length === 0) return null;
 
-  const supabase = createPublicSupabaseClient();
-  const { data: blocks } = await supabase
-    .from("blocks")
-    .select("page_id, data")
-    .eq("type", "gallery")
-    .in(
-      "page_id",
-      pages.map((p) => p.id)
-    )
-    .order("sort_order", { ascending: true });
+  const blocks = await db
+    .select({ page_id: blocksTable.page_id, data: blocksTable.data })
+    .from(blocksTable)
+    .where(and(eq(blocksTable.type, "gallery"), inArray(blocksTable.page_id, pages.map((p) => p.id))))
+    .orderBy(asc(blocksTable.sort_order));
 
   const firstMediaIdByPage = new Map<string, string>();
-  for (const block of blocks ?? []) {
+  for (const block of blocks) {
     if (firstMediaIdByPage.has(block.page_id)) continue;
     const mediaId = (block.data as GalleryData).media?.[0];
     if (mediaId) firstMediaIdByPage.set(block.page_id, mediaId);
@@ -30,8 +27,11 @@ export default async function CategoryIndex({ pages, basePath }: { pages: Page[]
   const thumbIds = [...firstMediaIdByPage.values()];
   const thumbById = new Map<string, { storage_path: string }>();
   if (thumbIds.length > 0) {
-    const { data: mediaRows } = await supabase.from("media").select("id, storage_path").in("id", thumbIds);
-    for (const row of mediaRows ?? []) thumbById.set(row.id, row);
+    const mediaRows = await db
+      .select({ id: mediaTable.id, storage_path: mediaTable.storage_path })
+      .from(mediaTable)
+      .where(inArray(mediaTable.id, thumbIds));
+    for (const row of mediaRows) thumbById.set(row.id, row);
   }
 
   return (

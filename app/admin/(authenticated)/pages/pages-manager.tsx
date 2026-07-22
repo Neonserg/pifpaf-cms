@@ -2,13 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { PageRow, BlockRow, MediaRow } from "@/lib/db/schema";
 import { createPage, deletePage, reorderPages, setHomePage, updatePage } from "./actions";
 import BlockBuilder from "./block-builder";
 
-type Page = Tables<"pages">;
-type Block = Tables<"blocks">;
-type Media = Tables<"media">;
+type Page = PageRow;
+type Block = BlockRow;
+type Media = MediaRow;
 // The generated DB type widens the `type` column's check constraint to
 // `string`; re-declare the literal union ourselves for real exhaustiveness.
 type PageType = "category" | "content" | "link" | "spacer";
